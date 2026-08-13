@@ -54,4 +54,4 @@ git branch -M main
 git push -u origin main
 ```
 
-> 每次修改 `drizzle/schema.ts` 後，請一併提交產生的 migration SQL。涉及點數、保證金、互評、爽約或通知的變更，應附上 transaction、授權與冪等性測試結果。
+> 每次修改 `drizzle/schema.ts` 後，請一併提交產生的 migration SQL。涉及出席、互評、信用、爽約或通知的變更，應附上 transaction、授權與冪等性測試結果。

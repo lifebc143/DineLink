@@ -4,8 +4,9 @@ erDiagram
     varchar auth_subject UK
     varchar display_name
     enum gender
-    integer point_balance
     integer credit_score
+    integer completed_event_count
+    integer no_show_count
     enum verification_status
   }
   DINING_EVENTS {
@@ -18,7 +19,6 @@ erDiagram
     varchar place_id
     enum payment_mode
     integer capacity
-    integer deposit_points
     enum status
     varchar reminder_task_uid UK
   }
@@ -29,6 +29,7 @@ erDiagram
     uuid reviewed_by FK
     enum status
     varchar introduction
+    timestamptz reviewed_at
   }
   EVENT_ATTENDANCES {
     uuid id PK
@@ -36,6 +37,7 @@ erDiagram
     uuid user_id FK
     uuid application_id FK
     enum status
+    timestamptz checked_in_at
   }
   CHAT_MESSAGES {
     uuid id PK
@@ -52,32 +54,6 @@ erDiagram
     integer punctuality_score
     integer politeness_score
     integer fun_score
-  }
-  EVENT_DEPOSITS {
-    uuid id PK
-    uuid event_id FK
-    uuid application_id FK
-    uuid user_id FK
-    integer points
-    enum status
-  }
-  POINT_TRANSACTIONS {
-    uuid id PK
-    uuid user_id FK
-    uuid event_id FK
-    uuid deposit_id FK
-    enum type
-    integer delta
-    integer balance_after
-  }
-  PAYMENT_TRANSACTIONS {
-    uuid id PK
-    uuid user_id FK
-    varchar provider_payment_id
-    enum purpose
-    enum status
-    integer amount
-    integer point_credit
   }
   NOTIFICATIONS {
     uuid id PK
@@ -101,12 +77,6 @@ erDiagram
   DINING_EVENTS ||--o{ EVENT_REVIEWS : scopes
   USERS ||--o{ EVENT_REVIEWS : writes
   USERS ||--o{ EVENT_REVIEWS : receives
-  EVENT_APPLICATIONS ||--o| EVENT_DEPOSITS : holds
-  DINING_EVENTS ||--o{ EVENT_DEPOSITS : requires
-  USERS ||--o{ EVENT_DEPOSITS : owns
-  USERS ||--o{ POINT_TRANSACTIONS : owns
-  EVENT_DEPOSITS ||--o{ POINT_TRANSACTIONS : accounts_for
-  USERS ||--o{ PAYMENT_TRANSACTIONS : pays
   USERS ||--o{ NOTIFICATIONS : receives
   DINING_EVENTS ||--o{ NOTIFICATIONS : concerns
   EVENT_APPLICATIONS ||--o{ NOTIFICATIONS : concerns

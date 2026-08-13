@@ -129,4 +129,15 @@ describe("發起飯局表單", () => {
     expect(screen.queryByRole("dialog", { name: "飯局預覽確認" })).not.toBeNull();
     expect(screen.queryByText("確認建立飯局")).not.toBeNull();
   });
+
+  it("產品規格頁呈現無保證金的審核、出席信用 Roadmap", () => {
+    render(<Home />);
+    fireEvent.click(screen.getByText("個人主頁"));
+    fireEvent.click(screen.getByText("產品規格與開發藍圖"));
+
+    expect(screen.queryByText(/MVP：帳號與實名驗證、飯局探索、申請審核、文字聊天室與基礎出席評價/)).not.toBeNull();
+    expect(screen.queryByText(/Beta：出席率／信用評分系統、飯局前推播通知、餐廳合作方案/)).not.toBeNull();
+    expect(screen.queryByText(/PostgreSQL \+ Drizzle ORM，將飯局、申請、聊天與評價拆分為獨立 Entity/)).not.toBeNull();
+    expect(screen.queryByText("保證金")).toBeNull();
+  });
 });
