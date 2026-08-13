@@ -130,6 +130,23 @@ describe("發起飯局表單", () => {
     expect(screen.queryByText("確認建立飯局")).not.toBeNull();
   });
 
+  it("飯局預覽與詳情均使用取消規則與出席信用提示，不顯示保證金", () => {
+    render(<Home />);
+    fireEvent.click(screen.getByText("發起飯局"));
+    fireEvent.change(screen.getByPlaceholderText("例如：下班後想聊聊旅行的義式晚餐"), { target: { value: "週末義式晚餐" } });
+    fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
+    fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
+    fireEvent.click(screen.getByText("預覽並發起飯局"));
+    expect(screen.getByRole("dialog", { name: "飯局預覽確認" }).textContent).toContain("取消規則、出席紀錄與信用 rating");
+    expect(screen.queryByText("保證金")).toBeNull();
+
+    cleanup();
+    render(<Home />);
+    fireEvent.click(screen.getAllByText("我要報名")[0]);
+    expect(screen.queryByText("審核與出席提示：")).not.toBeNull();
+    expect(screen.queryByText("保證金")).toBeNull();
+  });
+
   it("產品規格頁呈現無保證金的審核、出席信用 Roadmap", () => {
     render(<Home />);
     fireEvent.click(screen.getByText("個人主頁"));
