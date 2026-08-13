@@ -4,6 +4,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "DineLink 約飯",
   description: "以好好吃飯為核心的社交飯局配對平台。",
