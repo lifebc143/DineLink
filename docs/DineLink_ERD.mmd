@@ -1,0 +1,112 @@
+erDiagram
+  USERS {
+    uuid id PK
+    varchar auth_subject UK
+    varchar display_name
+    enum gender
+    integer point_balance
+    integer credit_score
+    enum verification_status
+  }
+  DINING_EVENTS {
+    uuid id PK
+    uuid host_id FK
+    varchar title
+    timestamptz event_start_at
+    varchar restaurant_name
+    text venue_address
+    varchar place_id
+    enum payment_mode
+    integer capacity
+    integer deposit_points
+    enum status
+    varchar reminder_task_uid UK
+  }
+  EVENT_APPLICATIONS {
+    uuid id PK
+    uuid event_id FK
+    uuid applicant_id FK
+    uuid reviewed_by FK
+    enum status
+    varchar introduction
+  }
+  EVENT_ATTENDANCES {
+    uuid id PK
+    uuid event_id FK
+    uuid user_id FK
+    uuid application_id FK
+    enum status
+  }
+  CHAT_MESSAGES {
+    uuid id PK
+    uuid event_id FK
+    uuid author_id FK
+    varchar content
+    timestamptz created_at
+  }
+  EVENT_REVIEWS {
+    uuid id PK
+    uuid event_id FK
+    uuid reviewer_id FK
+    uuid reviewee_id FK
+    integer punctuality_score
+    integer politeness_score
+    integer fun_score
+  }
+  EVENT_DEPOSITS {
+    uuid id PK
+    uuid event_id FK
+    uuid application_id FK
+    uuid user_id FK
+    integer points
+    enum status
+  }
+  POINT_TRANSACTIONS {
+    uuid id PK
+    uuid user_id FK
+    uuid event_id FK
+    uuid deposit_id FK
+    enum type
+    integer delta
+    integer balance_after
+  }
+  PAYMENT_TRANSACTIONS {
+    uuid id PK
+    uuid user_id FK
+    varchar provider_payment_id
+    enum purpose
+    enum status
+    integer amount
+    integer point_credit
+  }
+  NOTIFICATIONS {
+    uuid id PK
+    uuid recipient_id FK
+    uuid event_id FK
+    uuid application_id FK
+    enum type
+    varchar title
+    timestamptz read_at
+  }
+
+  USERS ||--o{ DINING_EVENTS : hosts
+  USERS ||--o{ EVENT_APPLICATIONS : applies
+  USERS ||--o{ EVENT_APPLICATIONS : reviews
+  DINING_EVENTS ||--o{ EVENT_APPLICATIONS : receives
+  DINING_EVENTS ||--o{ EVENT_ATTENDANCES : includes
+  USERS ||--o{ EVENT_ATTENDANCES : attends
+  EVENT_APPLICATIONS ||--o| EVENT_ATTENDANCES : confirms
+  DINING_EVENTS ||--o{ CHAT_MESSAGES : contains
+  USERS ||--o{ CHAT_MESSAGES : writes
+  DINING_EVENTS ||--o{ EVENT_REVIEWS : scopes
+  USERS ||--o{ EVENT_REVIEWS : writes
+  USERS ||--o{ EVENT_REVIEWS : receives
+  EVENT_APPLICATIONS ||--o| EVENT_DEPOSITS : holds
+  DINING_EVENTS ||--o{ EVENT_DEPOSITS : requires
+  USERS ||--o{ EVENT_DEPOSITS : owns
+  USERS ||--o{ POINT_TRANSACTIONS : owns
+  EVENT_DEPOSITS ||--o{ POINT_TRANSACTIONS : accounts_for
+  USERS ||--o{ PAYMENT_TRANSACTIONS : pays
+  USERS ||--o{ NOTIFICATIONS : receives
+  DINING_EVENTS ||--o{ NOTIFICATIONS : concerns
+  EVENT_APPLICATIONS ||--o{ NOTIFICATIONS : concerns

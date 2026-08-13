@@ -175,3 +175,32 @@
     }
   }
 }
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .form-input { @apply h-11 w-full rounded-xl border border-slate-100 bg-slate-50 px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100; }
+  .pressable { transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+  .pressable:active { transform: scale(0.97); }
+  .card-lift { transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1); }
+  @media (hover:hover) { .card-lift:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(30,20,70,0.16); } }
+}
+
+.phone-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 8% 10%, rgba(244,114,182,0.15), transparent 28%), radial-gradient(circle at 96% 30%, rgba(139,92,246,0.15), transparent 30%), radial-gradient(circle at 45% 96%, rgba(251,146,60,0.12), transparent 35%);
+}
+
+.ambient-glow { position: absolute; width: 13rem; height: 13rem; border-radius: 999px; filter: blur(45px); opacity: 0.35; pointer-events: none; }
+.ambient-one { top: 26rem; right: -7rem; background: #d946ef; }
+.ambient-two { top: 50rem; left: -8rem; background: #fb923c; }
+.mesh-orb { position: absolute; border-radius: 999px; filter: blur(2px); opacity: 0.9; }
+.mesh-orb-one { width: 12rem; height: 12rem; right: -3rem; top: 1.5rem; background: radial-gradient(circle at 28% 32%, #fb7185 0 20%, #a855f7 47%, transparent 70%); }
+.mesh-orb-two { width: 9rem; height: 9rem; right: 7rem; bottom: -5rem; background: radial-gradient(circle at 48% 38%, #fdba74 0 20%, #ec4899 53%, transparent 75%); }
+.mesh-orb-three { width: 12rem; height: 12rem; right: -4rem; top: -4rem; background: radial-gradient(circle at 35% 40%, #fb923c 0 17%, #db2777 42%, #7c3aed 68%, transparent 73%); }
+.page-enter { animation: page-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .page-enter { animation: none; } .pressable, .card-lift { transition: none; } }
