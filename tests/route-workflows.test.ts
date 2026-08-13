@@ -84,10 +84,11 @@ describe("DineLink transaction Route Handlers", () => {
       [{ punctuality: "4.5", politeness: "4.5", fun: "4.0" }],
     ]);
     state.transaction = async (callback) => callback(fixture.tx);
-    const request = new Request("http://localhost/api/events/event-id/reviews", { method: "POST", body: JSON.stringify({ revieweeId: applicant.id, punctualityScore: 5, politenessScore: 4, funScore: 4 }) });
+    const request = new Request("http://localhost/api/events/event-id/reviews", { method: "POST", body: JSON.stringify({ revieweeId: applicant.id, punctualityScore: 5, politenessScore: 4, funScore: 4, attendanceNote: "準時抵達並積極互動" }) });
     const response = await submitReview(request as never, { params: Promise.resolve({ eventId: "event-id" }) });
     expect(response.status).toBe(201);
     expect(fixture.inserts).toHaveLength(1);
+    expect(fixture.inserts[0]).toMatchObject({ punctualityScore: 5, politenessScore: 4, funScore: 4, privateNote: "準時抵達並積極互動" });
     expect(fixture.updates).toEqual(expect.arrayContaining([expect.objectContaining({ creditScore: 93 })]));
   });
 

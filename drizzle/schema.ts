@@ -30,7 +30,7 @@ export const applicationStatusEnum = pgEnum("application_status", ["pending", "a
 export const attendanceStatusEnum = pgEnum("attendance_status", ["confirmed", "attended", "late", "no_show", "excused"]);
 export const depositStatusEnum = pgEnum("deposit_status", ["held", "released", "forfeited", "refunded"]);
 export const pointTransactionTypeEnum = pgEnum("point_transaction_type", ["top_up", "deposit_hold", "deposit_release", "deposit_forfeit", "reward", "adjustment"]);
-export const notificationTypeEnum = pgEnum("notification_type", ["application_submitted", "application_approved", "application_rejected", "event_reminder", "event_cancelled", "member_no_show", "new_message", "review_request", "safety_alert"]);
+export const notificationTypeEnum = pgEnum("notification_type", ["application_submitted", "application_approved", "application_rejected", "application_cancelled", "attendance_updated", "event_reminder", "event_cancelled", "member_no_show", "new_message", "review_request", "safety_alert"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "succeeded", "failed", "refunded", "cancelled"]);
 export const paymentPurposeEnum = pgEnum("payment_purpose", ["point_top_up", "membership", "restaurant_campaign"]);
 

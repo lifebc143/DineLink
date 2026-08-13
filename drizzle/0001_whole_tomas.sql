@@ -1,0 +1,2 @@
+ALTER TYPE "public"."notification_type" ADD VALUE 'application_cancelled' BEFORE 'event_reminder';--> statement-breakpoint
+ALTER TYPE "public"."notification_type" ADD VALUE 'attendance_updated' BEFORE 'event_reminder';

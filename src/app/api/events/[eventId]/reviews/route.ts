@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { diningEvents, eventAttendances, eventReviews, users } from "../../../../../../drizzle/schema";
 
 export const runtime = "nodejs";
-const reviewInput = z.object({ revieweeId: z.string().uuid(), punctualityScore: z.number().int().min(1).max(5), politenessScore: z.number().int().min(1).max(5), funScore: z.number().int().min(1).max(5), privateNote: z.string().trim().max(500).optional() });
+const reviewInput = z.object({ revieweeId: z.string().uuid(), punctualityScore: z.number().int().min(1).max(5), politenessScore: z.number().int().min(1).max(5), funScore: z.number().int().min(1).max(5), attendanceNote: z.string().trim().max(500).optional() });
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
   const reviewer = await getCurrentUser();
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (!event) throw new Error("EVENT_NOT_COMPLETED");
       const attendance = await tx.select().from(eventAttendances).where(and(eq(eventAttendances.eventId, eventId), inArray(eventAttendances.userId, [reviewer.id, input.data.revieweeId]), inArray(eventAttendances.status, ["attended", "late"])));
       if (attendance.length !== 2) throw new Error("REVIEW_ATTENDANCE_REQUIRED");
-      const [created] = await tx.insert(eventReviews).values({ eventId, reviewerId: reviewer.id, ...input.data }).returning();
+      const [created] = await tx.insert(eventReviews).values({ eventId, reviewerId: reviewer.id, revieweeId: input.data.revieweeId, punctualityScore: input.data.punctualityScore, politenessScore: input.data.politenessScore, funScore: input.data.funScore, privateNote: input.data.attendanceNote }).returning();
       const [summary] = await tx.select({ punctuality: avg(eventReviews.punctualityScore), politeness: avg(eventReviews.politenessScore), fun: avg(eventReviews.funScore) }).from(eventReviews).where(eq(eventReviews.revieweeId, input.data.revieweeId));
       const total = Number(summary?.punctuality ?? 0) + Number(summary?.politeness ?? 0) + Number(summary?.fun ?? 0);
       const creditScore = Math.min(100, Math.max(0, Math.round(50 + total / 3 * 10)));
