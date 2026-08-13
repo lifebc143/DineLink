@@ -17,8 +17,8 @@ function secret() {
   return new TextEncoder().encode(value);
 }
 
-function cookieOptions() {
-  return { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/" };
+function cookieOptions(useSecureCookie = process.env.NODE_ENV === "production") {
+  return { httpOnly: true, secure: useSecureCookie, sameSite: "lax" as const, path: "/" };
 }
 
 function encodeState(payload: { redirectUri: string; nonce: string }) {
@@ -44,11 +44,11 @@ export async function beginOAuthLogin(origin: string) {
   url.searchParams.set("state", encodeState({ redirectUri, nonce }));
   url.searchParams.set("type", "signIn");
   const store = await cookies();
-  store.set(STATE_COOKIE, nonce, { ...cookieOptions(), maxAge: 600 });
+  store.set(STATE_COOKIE, nonce, { ...cookieOptions(origin.startsWith("https://")), maxAge: 600 });
   return url.toString();
 }
 
-export async function completeOAuthLogin(code: string, state: string) {
+export async function completeOAuthLogin(code: string, state: string, useSecureCookie = process.env.NODE_ENV === "production") {
   const decoded = decodeState(state);
   const store = await cookies();
   const expectedNonce = store.get(STATE_COOKIE)?.value;
@@ -69,7 +69,7 @@ export async function completeOAuthLogin(code: string, state: string) {
   const [user] = await db.insert(users).values({ authSubject: oauthUser.openId, displayName, email: oauthUser.email ?? null, lastActiveAt: new Date() }).onConflictDoUpdate({ target: users.authSubject, set: { displayName, email: oauthUser.email ?? null, lastActiveAt: new Date(), updatedAt: new Date() } }).returning();
   if (!user) throw new Error("User upsert failed");
   const session = await new SignJWT({ subject: user.id, displayName: user.displayName }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(`${SESSION_AGE_SECONDS}s`).sign(secret());
-  store.set(SESSION_COOKIE, session, { ...cookieOptions(), maxAge: SESSION_AGE_SECONDS });
+  store.set(SESSION_COOKIE, session, { ...cookieOptions(useSecureCookie), maxAge: SESSION_AGE_SECONDS });
   return user;
 }
 

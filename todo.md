@@ -35,3 +35,5 @@
 - [x] 為飯局完成流程測試 attended／late 保證金釋放、no_show 扣分與通知建立分支。
 - [x] 為互評流程測試 completed 飯局與出席資格限制，以及信用分數更新分支。
 - [x] 為申請審核流程測試 approved／rejected、名額滿額、保證金退回與通知寫入分支。
+- [x] 修正 OAuth 登入 callback URI，避免公開預覽在手機瀏覽器導向 localhost 而被授權服務拒絕。
+- [x] 驗證 OAuth 登入入口回傳的 redirect URI 與公開預覽網域一致。
