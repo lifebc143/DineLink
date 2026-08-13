@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { completeOAuthLogin } from "@/lib/auth";
+import { completeOAuthLogin, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
 import { getPublicOrigin } from "@/lib/public-origin";
 
 export const runtime = "nodejs";
@@ -10,9 +10,11 @@ export async function GET(request: NextRequest) {
   if (!code || !state) return NextResponse.json({ error: "code and state are required" }, { status: 400 });
   try {
     const publicOrigin = getPublicOrigin(request.headers, request.nextUrl.origin);
-    await completeOAuthLogin(code, state, publicOrigin.startsWith("https://"));
+    const { session } = await completeOAuthLogin(code, state, publicOrigin.startsWith("https://"));
     const postLoginPath = request.cookies.get("dine_link_post_login_path")?.value === "/?tab=create" ? "/?tab=create" : "/";
     const response = NextResponse.redirect(new URL(postLoginPath, publicOrigin));
+    response.cookies.set(SESSION_COOKIE, session, sessionCookieOptions(publicOrigin.startsWith("https://")));
+    response.cookies.delete("dine_link_oauth_state");
     response.cookies.delete("dine_link_post_login_path");
     return response;
   }

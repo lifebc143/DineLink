@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { users } from "../../drizzle/schema";
 
-const SESSION_COOKIE = "dine_link_session";
+export const SESSION_COOKIE = "dine_link_session";
 const STATE_COOKIE = "dine_link_oauth_state";
 const SESSION_AGE_SECONDS = 60 * 60 * 24 * 365;
 
@@ -19,6 +19,10 @@ function secret() {
 
 function cookieOptions(useSecureCookie = process.env.NODE_ENV === "production") {
   return { httpOnly: true, secure: useSecureCookie, sameSite: "lax" as const, path: "/" };
+}
+
+export function sessionCookieOptions(useSecureCookie = process.env.NODE_ENV === "production") {
+  return { ...cookieOptions(useSecureCookie), maxAge: SESSION_AGE_SECONDS };
 }
 
 function encodeState(payload: { redirectUri: string; nonce: string }) {
@@ -69,8 +73,7 @@ export async function completeOAuthLogin(code: string, state: string, useSecureC
   const [user] = await db.insert(users).values({ authSubject: oauthUser.openId, displayName, email: oauthUser.email ?? null, lastActiveAt: new Date() }).onConflictDoUpdate({ target: users.authSubject, set: { displayName, email: oauthUser.email ?? null, lastActiveAt: new Date(), updatedAt: new Date() } }).returning();
   if (!user) throw new Error("User upsert failed");
   const session = await new SignJWT({ subject: user.id, displayName: user.displayName }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(`${SESSION_AGE_SECONDS}s`).sign(secret());
-  store.set(SESSION_COOKIE, session, { ...cookieOptions(useSecureCookie), maxAge: SESSION_AGE_SECONDS });
-  return user;
+  return { user, session };
 }
 
 export async function getCurrentUser() {
