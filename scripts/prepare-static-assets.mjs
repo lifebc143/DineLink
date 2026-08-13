@@ -23,4 +23,10 @@ if (existsSync(publicRoot)) {
 }
 
 await writeFile(new URL("deployment-ready.txt", outputRoot), "DineLink static assets prepared for deployment.\n");
-await writeFile(runtimeEntry, "import '../.next/standalone/server.js';\n");
+await writeFile(runtimeEntry, `import { chdir } from "node:process";
+import { fileURLToPath } from "node:url";
+
+const standaloneRoot = new URL("../.next/standalone/", import.meta.url);
+chdir(fileURLToPath(standaloneRoot));
+await import(new URL("server.js", standaloneRoot).href);
+`);
