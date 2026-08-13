@@ -7,7 +7,7 @@ import { diningEvents, users } from "../../../../drizzle/schema";
 
 export const runtime = "nodejs";
 
-const createEventInput = z.object({ title: z.string().trim().min(4).max(120), description: z.string().trim().max(2000).optional(), eventStartAt: z.string().datetime(), venueAddress: z.string().trim().min(4), restaurantName: z.string().trim().max(180).optional(), capacity: z.number().int().min(2).max(12), paymentMode: z.enum(["host_treats", "split_bill", "men_treat_women"]), budgetMin: z.number().int().nonnegative().optional(), budgetMax: z.number().int().nonnegative().optional(), depositPoints: z.number().int().min(0).max(10_000).default(100) });
+const createEventInput = z.object({ title: z.string().trim().min(4).max(120), description: z.string().trim().max(2000).optional(), eventStartAt: z.string().datetime(), venueAddress: z.string().trim().min(4), restaurantName: z.string().trim().max(180).optional(), placeId: z.string().trim().max(255).optional(), latitude: z.string().regex(/^-?\d{1,3}(\.\d{1,7})?$/).optional(), longitude: z.string().regex(/^-?\d{1,3}(\.\d{1,7})?$/).optional(), capacity: z.number().int().min(2).max(12), paymentMode: z.enum(["host_treats", "split_bill", "men_treat_women"]), budgetMin: z.number().int().nonnegative().optional(), budgetMax: z.number().int().nonnegative().optional(), depositPoints: z.number().int().min(0).max(10_000).default(100) });
 
 export async function GET() {
   const rows = await db.select({ event: diningEvents, host: { id: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl } }).from(diningEvents).innerJoin(users, eq(diningEvents.hostId, users.id)).where(inArray(diningEvents.status, ["published", "full", "locked"])).orderBy(asc(diningEvents.eventStartAt));

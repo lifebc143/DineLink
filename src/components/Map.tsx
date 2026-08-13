@@ -33,11 +33,16 @@ function loadMapScript() {
   return mapScriptPromise;
 }
 
+export function loadGoogleMaps() {
+  if (typeof window === "undefined") return Promise.reject(new Error("Google Maps is only available in the browser"));
+  return loadMapScript();
+}
+
 export function MapView({ className = "", initialCenter = { lat: 25.037, lng: 121.543 }, initialZoom = 13, onMapReady }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const initMap = useCallback(async () => {
     try {
-      await loadMapScript();
+      await loadGoogleMaps();
       if (!containerRef.current || !window.google?.maps) return;
       const map = new window.google.maps.Map(containerRef.current, { center: initialCenter, zoom: initialZoom, mapId: "DEMO_MAP_ID", mapTypeControl: false, fullscreenControl: false, streetViewControl: false });
       onMapReady?.(map);

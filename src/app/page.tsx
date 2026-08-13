@@ -1,6 +1,6 @@
 "use client";
 
-import { MapView } from "@/components/Map";
+import { loadGoogleMaps, MapView } from "@/components/Map";
 import MyEventsManagement from "@/components/MyEventsManagement";
 import {
   ArrowLeft,
@@ -260,17 +260,55 @@ function CreatePage({ onCreated }: { onCreated: (event: DiningEvent) => void }) 
   const [apiError, setApiError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [created, setCreated] = useState(false);
-  const [selectedVenue, setSelectedVenue] = useState({ name: "PASTA & CO.", address: "台北市信義區松壽路", lat: 25.0339, lng: 121.5645 });
+  const [selectedVenue, setSelectedVenue] = useState({ name: "", address: "", lat: 25.037, lng: 121.543, placeId: null as string | null });
+  const [placeSuggestions, setPlaceSuggestions] = useState<Array<{ placeId: string; name: string; address: string }>>([]);
+  const [placesLoading, setPlacesLoading] = useState(false);
+  const [placesError, setPlacesError] = useState("");
+  const [hasResolvedVenue, setHasResolvedVenue] = useState(false);
+  const [authStatus, setAuthStatus] = useState<"checking" | "authenticated" | "anonymous">("checking");
   const billModes = ["我請客", "各自付", "男請女"];
-  const venueSuggestions = [
-    { name: "PASTA & CO.", address: "台北市信義區松壽路", lat: 25.0339, lng: 121.5645 },
-    { name: "YAKI NIKU LAB", address: "台北市大安區光復南路", lat: 25.033, lng: 121.543 },
-  ];
-  const chooseVenue = (venue: typeof selectedVenue) => {
-    setSelectedVenue(venue);
-    setVenueQuery(venue.name);
-    setShowSuggestions(false);
-    setShowVenueMap(true);
+  useEffect(() => { let active = true; void fetch("/api/auth/session", { cache: "no-store" }).then(async (response) => { const payload = await response.json().catch(() => ({ user: null })); if (active) setAuthStatus(payload.user ? "authenticated" : "anonymous"); }).catch(() => { if (active) setAuthStatus("anonymous"); }); return () => { active = false; }; }, []);
+  const searchPlaces = async (query: string) => {
+    if (query.trim().length < 2) { setPlaceSuggestions([]); setPlacesError(""); return; }
+    setPlacesLoading(true); setPlacesError("");
+    try {
+      await loadGoogleMaps();
+      const service = new google.maps.places.AutocompleteService();
+      service.getPlacePredictions({ input: query, componentRestrictions: { country: "tw" }, types: ["establishment", "geocode"] }, (predictions, status) => {
+        setPlacesLoading(false);
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) { setPlaceSuggestions([]); if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) setPlacesError("暫時找不到建議地點，可直接使用目前輸入的地址。 "); return; }
+        setPlaceSuggestions(predictions.slice(0, 5).map((prediction) => ({ placeId: prediction.place_id, name: prediction.structured_formatting.main_text, address: prediction.description })));
+      });
+    } catch { setPlacesLoading(false); setPlaceSuggestions([]); setPlacesError("地點服務暫時無法載入，仍可直接輸入完整地址。 "); }
+  };
+  const choosePlace = async (placeId: string, fallbackName: string) => {
+    setPlacesLoading(true); setPlacesError("");
+    try {
+      await loadGoogleMaps();
+      const service = new google.maps.places.PlacesService(document.createElement("div"));
+      service.getDetails({ placeId, fields: ["name", "formatted_address", "geometry", "place_id"] }, (place, status) => {
+        setPlacesLoading(false);
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !place?.geometry?.location) { setPlacesError("此地點無法取得座標，請改用完整地址。 "); return; }
+        const location = place.geometry.location;
+        setSelectedVenue({ name: place.name || fallbackName, address: place.formatted_address || fallbackName, lat: location.lat(), lng: location.lng(), placeId: place.place_id || placeId });
+        setVenueQuery(place.name || fallbackName); setHasResolvedVenue(true); setPlaceSuggestions([]); setShowSuggestions(false); setShowVenueMap(true);
+      });
+    } catch { setPlacesLoading(false); setPlacesError("地點詳細資料暫時無法讀取，請稍後重試。 "); }
+  };
+  const openVenueMap = async () => {
+    if (!venueQuery.trim()) { setFormError("請先輸入餐廳名稱或完整地址，再開啟地圖。 "); return; }
+    if (hasResolvedVenue) { setShowVenueMap((open) => !open); return; }
+    setPlacesLoading(true); setPlacesError("");
+    try {
+      await loadGoogleMaps();
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: venueQuery }, (results, status) => {
+        setPlacesLoading(false);
+        if (status !== google.maps.GeocoderStatus.OK || !results?.[0]?.geometry?.location) { setPlacesError("無法定位這個地址，請從建議清單選擇或輸入更完整的地址。 "); return; }
+        const result = results[0]; const location = result.geometry.location;
+        setSelectedVenue({ name: venueQuery, address: result.formatted_address, lat: location.lat(), lng: location.lng(), placeId: null }); setHasResolvedVenue(true); setShowVenueMap(true);
+      });
+    } catch { setPlacesLoading(false); setPlacesError("地圖服務暫時無法載入，請稍後再試。 "); }
   };
   const handlePreview = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -288,6 +326,7 @@ function CreatePage({ onCreated }: { onCreated: (event: DiningEvent) => void }) 
     try {
       const paymentMode = billMode === "我請客" ? "host_treats" : billMode === "男請女" ? "men_treat_women" : "split_bill";
       const numericBudget = Number.parseInt(budget.replace(/\D/g, ""), 10);
+      const venueAddress = hasResolvedVenue ? selectedVenue.address : venueQuery.trim();
       const localStart = new Date(`${date}T${time}:00+08:00`);
       const response = await fetch("/api/events", {
         method: "POST",
@@ -295,8 +334,11 @@ function CreatePage({ onCreated }: { onCreated: (event: DiningEvent) => void }) 
         body: JSON.stringify({
           title: title.trim(),
           eventStartAt: localStart.toISOString(),
-          venueAddress: selectedVenue.address,
+          venueAddress,
           restaurantName: venueQuery.trim(),
+          placeId: hasResolvedVenue ? selectedVenue.placeId ?? undefined : undefined,
+          latitude: hasResolvedVenue ? selectedVenue.lat.toString() : undefined,
+          longitude: hasResolvedVenue ? selectedVenue.lng.toString() : undefined,
           capacity: Number.parseInt(capacity, 10) || 4,
           paymentMode,
           budgetMin: Number.isFinite(numericBudget) ? numericBudget : undefined,
@@ -317,7 +359,7 @@ function CreatePage({ onCreated }: { onCreated: (event: DiningEvent) => void }) 
         date: new Intl.DateTimeFormat("zh-TW", { month: "numeric", day: "numeric", weekday: "short" }).format(eventDate),
         time,
         restaurant: venueQuery.trim(),
-        neighborhood: selectedVenue.address.split("市").pop()?.slice(0, 3) || "待確認",
+        neighborhood: venueAddress.split("市").pop()?.slice(0, 3) || "待確認",
         capacity: `1 / ${capacity || "4"} 人`,
         payment: billMode,
         paymentShort: billMode === "各自付" ? "AA 制" : billMode,
@@ -351,17 +393,18 @@ function CreatePage({ onCreated }: { onCreated: (event: DiningEvent) => void }) 
         </Field>
         <div className="grid grid-cols-2 gap-3"><Field label="日期"><div className="form-input flex items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-pink-500" /><input aria-label="選擇日期" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-700 outline-none" /></div></Field><Field label="時間"><div className="form-input flex items-center gap-2"><Clock3 className="h-4 w-4 shrink-0 text-pink-500" /><input aria-label="選擇時間" type="time" value={time} onChange={(event) => setTime(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-700 outline-none" /></div></Field></div>
         <Field label="餐廳或地點" helper="支援 Google 地點搜尋與地址自動完成">
-          <div className="relative"><div className="form-input flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-violet-500" /><input value={venueQuery} onChange={(event) => { setVenueQuery(event.target.value); setShowSuggestions(true); setCreated(false); }} onFocus={() => setShowSuggestions(true)} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="搜尋餐廳、地標或地址" /><button type="button" aria-label="在地圖確認餐廳位置" onClick={() => setShowVenueMap((open) => !open)} className="pressable grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-violet-100 text-violet-700"><MapPin className="h-4 w-4" /></button></div>{showSuggestions && <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-violet-100 bg-white p-1 shadow-xl"><p className="px-3 py-2 text-[11px] font-bold tracking-wide text-violet-500">建議地點</p>{venueSuggestions.map((venue) => <button type="button" key={venue.name} onClick={() => chooseVenue(venue)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-violet-50"><MapPin className="h-4 w-4 text-fuchsia-500" /><span>{venue.name} <small className="block text-xs font-normal text-slate-400">{venue.address}</small></span></button>)}</div>}</div>
+          <div className="relative"><div className="form-input flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-violet-500" /><input value={venueQuery} onChange={(event) => { const query = event.target.value; setVenueQuery(query); setShowSuggestions(true); setCreated(false); setHasResolvedVenue(false); void searchPlaces(query); }} onFocus={() => { setShowSuggestions(true); if (venueQuery.trim().length >= 2) void searchPlaces(venueQuery); }} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="搜尋餐廳、地標或地址" /><button type="button" aria-label="在地圖確認餐廳位置" onClick={() => void openVenueMap()} className="pressable grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-violet-100 text-violet-700"><MapPin className="h-4 w-4" /></button></div>{showSuggestions && <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-violet-100 bg-white p-1 shadow-xl"><p className="px-3 py-2 text-[11px] font-bold tracking-wide text-violet-500">{placesLoading ? "正在搜尋地點…" : "Google 地點建議"}</p>{placeSuggestions.map((place) => <button type="button" key={place.placeId} onClick={() => void choosePlace(place.placeId, place.name)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-violet-50"><MapPin className="h-4 w-4 text-fuchsia-500" /><span>{place.name} <small className="block text-xs font-normal text-slate-400">{place.address}</small></span></button>)}{!placesLoading && placeSuggestions.length === 0 && venueQuery.trim().length >= 2 && <p className="px-3 py-2 text-xs leading-relaxed text-slate-500">{placesError || "找不到建議地點；可直接輸入完整地址，再點右側地圖圖示定位。"}</p>}</div>}</div>
         </Field>
         {showVenueMap && <div className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-violet-50 px-3.5 py-2.5"><div><p className="text-xs font-black text-slate-800">地圖確認位置</p><p className="mt-0.5 text-[11px] text-slate-500">{selectedVenue.name} · {selectedVenue.address}</p></div><button type="button" onClick={() => setShowVenueMap(false)} className="pressable rounded-lg p-1.5 text-slate-400" aria-label="關閉地圖"><X className="h-4 w-4" /></button></div><MapView className="h-[250px]" initialCenter={{ lat: selectedVenue.lat, lng: selectedVenue.lng }} initialZoom={16} onMapReady={(map) => { const marker = new google.maps.marker.AdvancedMarkerElement({ map, position: { lat: selectedVenue.lat, lng: selectedVenue.lng }, title: selectedVenue.name }); marker.addListener("click", () => setShowVenueMap(false)); }} /></div>}
         <Field label="買單方式"><div className="grid grid-cols-3 gap-2">{billModes.map((mode) => <button type="button" key={mode} onClick={() => setBillMode(mode)} className={`pressable rounded-xl border px-2 py-2.5 text-xs font-bold ${billMode === mode ? "border-violet-600 bg-violet-600 text-white" : "border-slate-100 bg-slate-50 text-slate-500"}`}>{mode}</button>)}</div></Field>
         <div className="grid grid-cols-2 gap-3"><Field label="每人預算"><input value={budget} onChange={(event) => setBudget(event.target.value)} className="form-input" placeholder="例如 $800" inputMode="numeric" /></Field><Field label="人數上限"><input value={capacity} onChange={(event) => setCapacity(event.target.value)} className="form-input" placeholder="4 人" inputMode="numeric" /></Field></div>
         <div className="rounded-2xl bg-violet-50 px-3.5 py-3 text-xs leading-relaxed text-violet-800"><ShieldCheck className="mr-1 inline h-4 w-4 text-violet-600" />參與者確認後才會進入聊天室；取消規則、出席紀錄與信用 rating 將於報名時清楚提示。</div>
+        {authStatus === "anonymous" && <div className="rounded-2xl border border-amber-100 bg-amber-50 px-3.5 py-3 text-xs leading-relaxed text-amber-900"><b>登入後才能正式建立飯局。</b><a href="/api/auth/login" className="ml-2 inline-flex rounded-lg bg-slate-950 px-2.5 py-1.5 text-xs font-bold text-white">立即登入</a></div>}
         {formError && <p role="alert" className="rounded-2xl bg-rose-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-rose-700">{formError}</p>}
         {created && <p role="status" className="rounded-2xl bg-emerald-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-emerald-700"><Check className="mr-1 inline h-4 w-4" />飯局已成功建立，現在已顯示在探索清單與我的飯局中。</p>}
         <button type="submit" className="pressable w-full rounded-2xl bg-slate-950 py-3.5 text-sm font-bold text-white shadow-[0_12px_24px_rgba(15,23,42,0.25)]">{created ? "已確認發起飯局" : "預覽並發起飯局"}</button>
       </form>
-      {showPreview && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/45 p-0 backdrop-blur-sm"><section role="dialog" aria-modal="true" aria-label="飯局預覽確認" className="page-enter max-h-[calc(100dvh-0.5rem)] w-full overflow-y-auto overscroll-contain rounded-t-[32px] bg-[#fcfbff] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl"><div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300" /><div className="rounded-[24px] bg-slate-950 p-4 text-white"><p className="text-[11px] font-bold tracking-[0.18em] text-pink-200">TABLE PREVIEW</p><h2 className="mt-2 text-xl font-black">{title}</h2><p className="mt-3 flex items-center gap-2 text-sm text-violet-100"><CalendarDays className="h-4 w-4 text-pink-300" />{date} · {time}</p><p className="mt-2 flex items-center gap-2 text-sm text-violet-100"><MapPin className="h-4 w-4 text-orange-300" />{venueQuery} · {selectedVenue.address}</p></div><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-2xl bg-white p-3 text-xs font-bold text-slate-700 shadow-sm">{billMode}</div><div className="rounded-2xl bg-white p-3 text-xs font-bold text-slate-700 shadow-sm">{budget || "預算待補"} · {capacity || "4"} 人</div></div><div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50 p-3 text-xs leading-relaxed text-violet-900"><ShieldCheck className="mr-1 inline h-4 w-4 text-violet-600" />確認後會建立飯局並寫入你的飯局清單；取消規則、出席紀錄與信用 rating 會於送出前清楚提示。</div>{apiError && <div role="alert" className="mt-3 rounded-2xl bg-rose-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-rose-700"><p>{apiError}</p>{apiError.startsWith("請先登入") && <a href="/api/auth/login" className="mt-2 inline-block rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white">立即登入後建立飯局</a>}</div>}<div className="sticky bottom-0 -mx-4 mt-5 flex gap-3 border-t border-slate-100 bg-[#fcfbff]/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur"><button type="button" disabled={isSubmitting} onClick={() => setShowPreview(false)} className="pressable flex-1 rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 disabled:opacity-50">返回編輯</button><button type="button" disabled={isSubmitting} onClick={confirmCreate} className="pressable flex-1 rounded-2xl bg-slate-950 py-3 text-sm font-bold text-white disabled:opacity-60">{isSubmitting ? "建立中…" : "確認建立飯局"}</button></div></section></div>}
+      {showPreview && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/45 p-0 backdrop-blur-sm"><section role="dialog" aria-modal="true" aria-label="飯局預覽確認" className="page-enter max-h-[calc(100dvh-0.5rem)] w-full overflow-y-auto overscroll-contain rounded-t-[32px] bg-[#fcfbff] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl"><div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300" /><div className="rounded-[24px] bg-slate-950 p-4 text-white"><p className="text-[11px] font-bold tracking-[0.18em] text-pink-200">TABLE PREVIEW</p><h2 className="mt-2 text-xl font-black">{title}</h2><p className="mt-3 flex items-center gap-2 text-sm text-violet-100"><CalendarDays className="h-4 w-4 text-pink-300" />{date} · {time}</p><p className="mt-2 flex items-center gap-2 text-sm text-violet-100"><MapPin className="h-4 w-4 text-orange-300" />{venueQuery} · {hasResolvedVenue ? selectedVenue.address : "使用輸入的地點文字"}</p></div><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-2xl bg-white p-3 text-xs font-bold text-slate-700 shadow-sm">{billMode}</div><div className="rounded-2xl bg-white p-3 text-xs font-bold text-slate-700 shadow-sm">{budget || "預算待補"} · {capacity || "4"} 人</div></div><div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50 p-3 text-xs leading-relaxed text-violet-900"><ShieldCheck className="mr-1 inline h-4 w-4 text-violet-600" />確認後會建立飯局並寫入你的飯局清單；取消規則、出席紀錄與信用 rating 會於送出前清楚提示。</div>{apiError && <div role="alert" className="mt-3 rounded-2xl bg-rose-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-rose-700"><p>{apiError}</p>{apiError.startsWith("請先登入") && <a href="/api/auth/login" className="mt-2 inline-block rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white">立即登入後建立飯局</a>}</div>}<div className="sticky bottom-0 -mx-4 mt-5 flex gap-3 border-t border-slate-100 bg-[#fcfbff]/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur"><button type="button" disabled={isSubmitting} onClick={() => setShowPreview(false)} className="pressable flex-1 rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 disabled:opacity-50">返回編輯</button><button type="button" disabled={isSubmitting} onClick={confirmCreate} className="pressable flex-1 rounded-2xl bg-slate-950 py-3 text-sm font-bold text-white disabled:opacity-60">{isSubmitting ? "建立中…" : "確認建立飯局"}</button></div></section></div>}
     </section>
   );
 }

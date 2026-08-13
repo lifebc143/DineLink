@@ -7,6 +7,7 @@ vi.mock("@/components/Map", () => ({
   MapView: ({ initialCenter }: { initialCenter: { lat: number; lng: number } }) => (
     <div data-testid="venue-map">{initialCenter.lat},{initialCenter.lng}</div>
   ),
+  loadGoogleMaps: vi.fn(() => Promise.resolve()),
 }));
 
 afterEach(() => {
@@ -16,7 +17,7 @@ afterEach(() => {
 });
 
 describe("發起飯局表單", () => {
-  it("可選擇日期並開啟餐廳地圖確認視圖", () => {
+  it("可選擇日期並開啟 Google 地點搜尋入口", () => {
     render(<Home />);
 
     fireEvent.click(screen.getByText("發起飯局"));
@@ -27,19 +28,29 @@ describe("發起飯局表單", () => {
 
     const venueInput = screen.getByPlaceholderText("搜尋餐廳、地標或地址");
     fireEvent.focus(venueInput);
-    fireEvent.click(screen.getByText("PASTA & CO."));
-
-    expect(screen.queryByText("地圖確認位置")).not.toBeNull();
-    expect(screen.getByTestId("venue-map").textContent).toContain("25.0339,121.5645");
+    expect(screen.queryByText("Google 地點建議")).not.toBeNull();
   });
 
-  it("可直接切換地圖確認視圖", () => {
+  it("未輸入地點時會提示先輸入地址再定位", () => {
     render(<Home />);
     fireEvent.click(screen.getByText("發起飯局"));
     fireEvent.click(screen.getByLabelText("在地圖確認餐廳位置"));
 
-    expect(screen.queryByText("地圖確認位置")).not.toBeNull();
-    expect(screen.queryByLabelText("關閉地圖")).not.toBeNull();
+    expect(screen.queryByRole("alert")?.textContent).toContain("請先輸入餐廳名稱或完整地址");
+  });
+
+  it("選取 Google Places 建議後會解析地址座標並可開關地圖確認視圖", async () => {
+    vi.stubGlobal("google", { maps: { places: { PlacesServiceStatus: { OK: "OK", ZERO_RESULTS: "ZERO_RESULTS" }, AutocompleteService: class { getPlacePredictions(_: unknown, callback: (items: Array<{ place_id: string; description: string; structured_formatting: { main_text: string } }>, status: string) => void) { callback([{ place_id: "place-1", description: "台北市信義區測試路 1 號", structured_formatting: { main_text: "測試咖啡" } }], "OK"); } }, PlacesService: class { getDetails(_: unknown, callback: (place: { name: string; formatted_address: string; place_id: string; geometry: { location: { lat: () => number; lng: () => number } } }, status: string) => void) { callback({ name: "測試咖啡", formatted_address: "台北市信義區測試路 1 號", place_id: "place-1", geometry: { location: { lat: () => 25.0339, lng: () => 121.5645 } } }, "OK"); } } }, GeocoderStatus: { OK: "OK" } } });
+    render(<Home />);
+    fireEvent.click(screen.getByText("發起飯局"));
+    fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "測試咖啡" } });
+    fireEvent.click(await screen.findByText("測試咖啡"));
+    expect(await screen.findByText("地圖確認位置")).not.toBeNull();
+    expect(screen.getByText("測試咖啡 · 台北市信義區測試路 1 號")).not.toBeNull();
+    expect(screen.getByTestId("venue-map").textContent).toContain("25.0339,121.5645");
+    fireEvent.click(screen.getByLabelText("關閉地圖"));
+    fireEvent.click(screen.getByLabelText("在地圖確認餐廳位置"));
+    expect(screen.getByText("地圖確認位置")).not.toBeNull();
   });
 
   it("未填必填欄位時會顯示驗證提示", () => {
