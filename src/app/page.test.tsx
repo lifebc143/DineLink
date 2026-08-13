@@ -82,6 +82,7 @@ describe("發起飯局表單", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("請先登入後再建立飯局");
+    expect(screen.getByText("立即登入後建立飯局").getAttribute("href")).toBe("/api/auth/login");
   });
 
   it("API 驗證失敗時會顯示可讀錯誤而不建立飯局", async () => {
@@ -210,5 +211,41 @@ describe("發起飯局表單", () => {
     expect(screen.getByText("75%")).not.toBeNull();
     expect(screen.getByText("信用 Rating 趨勢")).not.toBeNull();
     expect(screen.getByText("準時 · 4.5 / 5")).not.toBeNull();
+  });
+
+  it("公開 API 的已發布飯局會載入探索清單，並保留行動版確認按鈕", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/events" ? { events: [{ event: { id: "db-event-1", title: "資料庫飯局", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "資料庫餐廳", venueAddress: "台北市信義區", neighborhood: "信義區", capacity: 4, paymentMode: "split_bill", budgetMin: 600, budgetMax: 800, latitude: "25.0339", longitude: "121.5645", cuisineTags: ["義式料理"] }, host: { displayName: "資料庫主辦人" } }] } : {} })));
+    render(<Home />);
+    expect(await screen.findByText("資料庫飯局")).not.toBeNull();
+    fireEvent.click(screen.getByText("發起飯局"));
+    fireEvent.change(screen.getByPlaceholderText("例如：下班後想聊聊旅行的義式晚餐"), { target: { value: "確認按鈕測試飯局" } });
+    fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
+    fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
+    fireEvent.click(screen.getByText("預覽並發起飯局"));
+    expect(screen.getByRole("dialog", { name: "飯局預覽確認" }).className).toContain("overflow-y-auto");
+    expect(screen.getByText("確認建立飯局")).not.toBeNull();
+  });
+
+  it("建立成功後，我的飯局會從受保護查詢結果顯示新建立資料", async () => {
+    const createdEvent = { id: "created-event", title: "寫入後可見飯局", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "測試餐廳", venueAddress: "台北市信義區", status: "published", capacity: 4 };
+    vi.stubGlobal("fetch", vi.fn((url: string, options?: RequestInit) => {
+      if (url === "/api/events" && options?.method === "POST") return Promise.resolve({ ok: true, status: 201, json: async () => ({ event: createdEvent }) });
+      if (url === "/api/events") return Promise.resolve({ ok: true, status: 200, json: async () => ({ events: [] }) });
+      if (url === "/api/me/events") return Promise.resolve({ ok: true, status: 200, json: async () => ({ hosted: [{ event: createdEvent, pendingApplications: [], attendances: [] }], applied: [] }) });
+      if (url === "/api/notifications") return Promise.resolve({ ok: true, status: 200, json: async () => ({ notifications: [] }) });
+      if (url === "/api/me/review-tasks") return Promise.resolve({ ok: true, status: 200, json: async () => ({ tasks: [] }) });
+      return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+    }));
+    render(<Home />);
+    fireEvent.click(screen.getByText("發起飯局"));
+    fireEvent.change(screen.getByPlaceholderText("例如：下班後想聊聊旅行的義式晚餐"), { target: { value: "寫入後可見飯局" } });
+    fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
+    fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "測試餐廳" } });
+    fireEvent.click(screen.getByText("預覽並發起飯局"));
+    fireEvent.click(screen.getByText("確認建立飯局"));
+    await screen.findByRole("status");
+    fireEvent.click(screen.getByText("個人主頁"));
+    fireEvent.click(screen.getByText("我的飯局"));
+    expect(await screen.findByText("寫入後可見飯局")).not.toBeNull();
   });
 });
