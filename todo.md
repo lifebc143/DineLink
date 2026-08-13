@@ -42,3 +42,4 @@
 - [ ] 建立 Next.js standalone Docker 部署設定，讓正式 runtime 直接啟動 App Router 服務。
 - [x] 建立與受管啟動命令相容的 dist/index.js wrapper，避免正式容器執行舊版入口而無法啟動。
 - [ ] 驗證正式站台首頁與公開 API 健康檢查可回應 200，再確認部署成功。
+- [ ] 移除不必要的 Dockerfile，並將 production start 腳本統一為 node dist/index.js 以符合受管部署合約。
