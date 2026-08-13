@@ -1,0 +1,21 @@
+import { and, eq } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { diningEvents, eventAttendances } from "../../../../../../drizzle/schema";
+
+export const runtime = "nodejs";
+const attendanceInput = z.object({ userId: z.string().uuid(), status: z.enum(["attended", "late", "no_show", "excused"]) });
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ eventId: string }> }) {
+  const host = await getCurrentUser();
+  if (!host) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
+  const { eventId } = await params;
+  const input = attendanceInput.safeParse(await request.json());
+  if (!input.success) return NextResponse.json({ error: "INVALID_ATTENDANCE" }, { status: 400 });
+  const [event] = await db.select().from(diningEvents).where(eq(diningEvents.id, eventId)).limit(1);
+  if (!event || event.hostId !== host.id) return NextResponse.json({ error: "NOT_EVENT_HOST" }, { status: 403 });
+  const [attendance] = await db.update(eventAttendances).set({ status: input.data.status, checkedInAt: ["attended", "late"].includes(input.data.status) ? new Date() : null, statusUpdatedAt: new Date() }).where(and(eq(eventAttendances.eventId, eventId), eq(eventAttendances.userId, input.data.userId))).returning();
+  return attendance ? NextResponse.json({ attendance }) : NextResponse.json({ error: "ATTENDANCE_NOT_FOUND" }, { status: 404 });
+}

@@ -1,6 +1,6 @@
 # DineLink 約飯 Web App MVP TODO
 
-- [ ] 將專案執行結構統一為 Next.js App Router 與 PostgreSQL + Drizzle ORM 目標架構。
+- [x] 將專案執行結構統一為 Next.js App Router 與 PostgreSQL + Drizzle ORM 目標架構。
 - [x] 建立手機優先、max-w-md 居中的 App Shell 與四分頁底部導覽列。
 - [x] 實作活力 Mesh Gradient 視覺系統、字體階層與無障礙色彩對比。
 - [x] 建立飯局探索列表、篩選區與飯局卡片 Mock Data 呈現。
@@ -10,9 +10,9 @@
 - [x] 建立訊息分頁的群組聊天室 UI 與已確認成員存取提示。
 - [x] 建立個人主頁，呈現信用分數、點數與互評指標。
 - [x] 建立 Drizzle PostgreSQL schema，涵蓋 users、dining_events、event_applications、chat_messages、reviews、deposits 與通知紀錄。
-- [ ] 實作飯局報名、主辦人審核、申請狀態更新與保證金凍結的後端契約。
-- [ ] 實作限已確認成員使用的群組文字聊天資料流程。
-- [ ] 實作飯後互評、信用分數彙總與爽約扣分規則。
+- [x] 實作飯局報名、主辦人審核、申請狀態更新與保證金凍結的後端契約。
+- [x] 實作限已確認成員使用的群組文字聊天資料流程。
+- [x] 實作飯後互評、信用分數彙總與爽約扣分規則。
 - [x] 設計飯局開始前兩小時提醒與即時狀態通知的可靠背景任務方案。
 - [x] 建立精簡 PRD 文件頁面，說明產品定位、功能模組、技術架構及 0-to-1 Roadmap。
 - [x] 補齊單元測試、型別檢查與手機版畫面驗證。
@@ -20,3 +20,18 @@
 - [x] 補齊個人主頁的點數與互評機制說明，避免呈現可能被誤認為真實的評價數值。
 - [x] 為手機版四分頁、列表／地圖切換、飯局詳情報名彈窗、聊天室送訊與 PRD 入口補上前端互動測試。
 - [x] 補齊手機寬度下探索、發起飯局、訊息、個人主頁與 PRD 頁面的畫面驗證紀錄。
+- [x] 補上飯局完成、出席簽到／遲到標記與保證金釋放的後端 API／資料流程，形成互評閉環。
+- [x] 為互評、爽約扣分、保證金釋放與 Next.js 目標架構建置流程補上自動化測試。
+- [x] 將根目錄主程式由 Vite／Express／MySQL 重構為 Next.js App Router 的可預覽執行入口。
+- [x] 將主程式資料庫方言與連線統一為 PostgreSQL + Drizzle ORM，並建立可套用的 PostgreSQL migration。
+- [x] 將既有 OAuth 登入契約遷移至 Next.js Route Handler，保留安全的 session 驗證邊界。
+- [x] 將飯局、申請、聊天室、出席、保證金、互評與通知 API 遷移至 Next.js Route Handler。
+- [x] 修復 Next.js production build 並以主專案執行建置、型別檢查與手機版預覽驗證。
+- [x] 建立 Next.js + PostgreSQL 主專案的 GitHub 推送指南與必要環境變數清單。
+- [ ] 建立最終 checkpoint，提供可下載／匯出至 GitHub 的統一架構專案版本。
+- [x] 補上 Next.js 通知列表與已讀 Route Handlers，完成通知資料的使用者端 API。
+- [x] 為飯局完成、互評、申請審核與保證金流程補上 Route Handler 契約測試。
+- [x] 建立可重複執行的 production build 驗證腳本與 GitHub Actions workflow。
+- [x] 為飯局完成流程測試 attended／late 保證金釋放、no_show 扣分與通知建立分支。
+- [x] 為互評流程測試 completed 飯局與出席資格限制，以及信用分數更新分支。
+- [x] 為申請審核流程測試 approved／rejected、名額滿額、保證金退回與通知寫入分支。

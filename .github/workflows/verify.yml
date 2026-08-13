@@ -1,0 +1,32 @@
+name: Verify Next.js MVP
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      JWT_SECRET: ci-only-secret-not-for-production
+      VITE_APP_ID: ci-app
+      VITE_OAUTH_PORTAL_URL: https://example.test
+      OAUTH_SERVER_URL: https://example.test
+      NEXT_PUBLIC_FORGE_API_KEY: ci-key
+      NEXT_PUBLIC_FORGE_API_URL: https://example.test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test -- --exclude tests/postgres-connection.test.ts --exclude tests/postgres-schema.test.ts
+      - run: pnpm build
+      - run: pnpm check

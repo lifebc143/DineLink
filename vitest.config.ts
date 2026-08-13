@@ -7,14 +7,13 @@ export default defineConfig({
   root: templateRoot,
   resolve: {
     alias: {
-      "@": path.resolve(templateRoot, "client", "src"),
-      "@shared": path.resolve(templateRoot, "shared"),
+      "@": path.resolve(templateRoot, "src"),
       "@assets": path.resolve(templateRoot, "attached_assets"),
     },
   },
   test: {
     environment: "node",
-    environmentMatchGlobs: [["client/**/*.test.tsx", "jsdom"]],
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "client/**/*.test.tsx"],
+    environmentMatchGlobs: [["src/**/*.test.tsx", "jsdom"]],
+    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "tests/**/*.test.ts", "tests/**/*.test.tsx", "src/**/*.test.ts", "src/**/*.test.tsx"],
   },
 });

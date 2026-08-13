@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1786583405451,
+      "tag": "0000_lyrical_kronos",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1786585126755,
+      "tag": "0001_luxuriant_xavin",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786585325230,
+      "tag": "0002_calm_marauders",
+      "breakpoints": true
+    }
+  ]
+}
