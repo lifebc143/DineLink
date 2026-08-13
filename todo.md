@@ -37,3 +37,5 @@
 - [x] 為申請審核流程測試 approved／rejected、名額滿額、保證金退回與通知寫入分支。
 - [x] 修正 OAuth 登入 callback URI，避免公開預覽在手機瀏覽器導向 localhost 而被授權服務拒絕。
 - [x] 驗證 OAuth 登入入口回傳的 redirect URI 與公開預覽網域一致。
+- [x] 修正 Next.js 正式部署找不到 dist/public 靜態資產的封裝輸出問題。
+- [ ] 建立通過部署驗證的 checkpoint，讓 DineLink 自動發佈為正式網站。
