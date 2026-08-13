@@ -38,14 +38,17 @@
 - [x] 修正 OAuth 登入 callback URI，避免公開預覽在手機瀏覽器導向 localhost 而被授權服務拒絕。
 - [x] 驗證 OAuth 登入入口回傳的 redirect URI 與公開預覽網域一致。
 - [x] 修正 Next.js 正式部署找不到 dist/public 靜態資產的封裝輸出問題。
-- [ ] 建立通過部署驗證的 checkpoint，讓 DineLink 自動發佈為正式網站。
+- [x] 建立通過部署驗證的 checkpoint，讓 DineLink 自動發佈為正式網站。
 - [x] 移除不相容的 standalone Docker 覆寫，改由受管平台透過 dist/index.js 啟動 Next.js runtime。
 - [x] 建立與受管啟動命令相容的 dist/index.js wrapper，避免正式容器執行舊版入口而無法啟動。
-- [ ] 驗證正式站台首頁與公開 API 健康檢查可回應 200，再確認部署成功。
-- [ ] 移除不必要的 Dockerfile，並將 production start 腳本統一為 node dist/index.js 以符合受管部署合約。
-- [ ] 修正正式站 _next/static CSS 與 JavaScript 資產 404，恢復手機版正式網站的完整視覺樣式。
-- [ ] 重新部署靜態資產修正版，並驗證正式網域首頁與 /api/events 均回應 200。
-- [ ] 修復正式網域 CSS 404 後，驗證手機版 Mesh Gradient、字體與卡片樣式與預覽一致。
-- [ ] 將首頁 layout 改為動態渲染，確保 standalone runtime 可在請求時內嵌已建置 CSS。
-- [ ] 修正 dist/index.js 的工作目錄至 .next/standalone，讓正式站能直接服務 _next/static CSS 與 JavaScript bundle。
-- [ ] 將 Next.js 公開資產前綴移出被平台攔截的 /_next 路徑，恢復 JavaScript bundle 載入與前端互動。
+- [x] 驗證正式站台首頁與公開 API 健康檢查可回應 200，再確認部署成功。
+- [x] 移除不必要的 Dockerfile，並將 production start 腳本統一為 node dist/index.js 以符合受管部署合約。
+- [x] 以 dine-assets 資產前綴繞過正式平台的 /_next/static 404，並記錄公開 CSS／JavaScript 200 驗證結果。
+- [x] 重新部署靜態資產修正版，並驗證正式網域首頁與 /api/events 均回應 200。
+- [x] 以可重複畫面驗證比對正式站與預覽的 Mesh Gradient、字體、卡片與底部導覽，確認視覺一致。
+- [x] 將首頁 layout 改為動態渲染，確保 standalone runtime 可在請求時內嵌已建置 CSS。
+- [x] 修正 dist/index.js 的工作目錄至 .next/standalone，讓正式站能直接服務 _next/static CSS 與 JavaScript bundle。
+- [x] 將 Next.js 公開資產前綴移出被平台攔截的 /_next 路徑，恢復 JavaScript bundle 載入與前端互動。
+- [x] 驗證正式首頁實際引用的 dine-assets CSS 與 JavaScript 均回應 200，並記錄公開檢查結果。
+- [x] 在正式手機版驗證底部導覽與列表／地圖切換可互動，並確認已套用 Mesh Gradient 樣式類別。
+- [x] 對正式站與預覽站的 phone-shell、max-w-md、卡片、底部導覽與 Mesh Gradient 關鍵樣式建立可重複的 DOM／計算樣式比對記錄。
