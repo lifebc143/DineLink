@@ -32,7 +32,7 @@ type Tab = "explore" | "create" | "messages" | "profile";
 type ViewMode = "list" | "map";
 
 type DiningEvent = {
-  id: number;
+  id: string | number;
   title: string;
   cuisine: string;
   date: string;
@@ -156,8 +156,8 @@ function EventCard({ event, onOpen }: { event: DiningEvent; onOpen: () => void }
   );
 }
 
-function ExploreMap({ onOpen }: { onOpen: (event: DiningEvent) => void }) {
-  const markers = useMemo(() => DINING_EVENTS, []);
+function ExploreMap({ events, onOpen }: { events: DiningEvent[]; onOpen: (event: DiningEvent) => void }) {
+  const markers = useMemo(() => events, [events]);
   return (
     <div className="relative overflow-hidden rounded-[28px] border border-white/60 bg-white shadow-[0_16px_35px_rgba(30,20,70,0.13)]">
       <MapView
@@ -182,7 +182,7 @@ function ExploreMap({ onOpen }: { onOpen: (event: DiningEvent) => void }) {
   );
 }
 
-function ExplorePage({ onOpen }: { onOpen: (event: DiningEvent) => void }) {
+function ExplorePage({ events, notice, onOpen }: { events: DiningEvent[]; notice: string; onOpen: (event: DiningEvent) => void }) {
   const [view, setView] = useState<ViewMode>("list");
   const [filter, setFilter] = useState("全部");
   const filters = ["全部", "今晚", "週末", "近距離"];
@@ -223,24 +223,33 @@ function ExplorePage({ onOpen }: { onOpen: (event: DiningEvent) => void }) {
       </div>
 
       <div className="mt-5">
+        {notice && <p role="status" className="mb-4 rounded-2xl bg-emerald-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-emerald-700"><Check className="mr-1 inline h-4 w-4" />{notice}</p>}
         {view === "list" ? (
           <div className="space-y-4">
             <div className="flex items-end justify-between px-1"><div><p className="text-[11px] font-bold tracking-[0.15em] text-violet-500">NEAR YOU</p><h2 className="mt-1 text-xl font-black tracking-tight text-slate-950">附近的好好飯局</h2></div><button className="text-xs font-bold text-violet-600">查看全部</button></div>
-            {DINING_EVENTS.map((event) => <EventCard key={event.id} event={event} onOpen={() => onOpen(event)} />)}
+            {events.map((event) => <EventCard key={event.id} event={event} onOpen={() => onOpen(event)} />)}
           </div>
-        ) : <ExploreMap onOpen={onOpen} />}
+        ) : <ExploreMap events={events} onOpen={onOpen} />}
       </div>
     </section>
   );
 }
 
-function CreatePage() {
+function CreatePage({ onCreated }: { onCreated: (event: DiningEvent) => void }) {
   const [billMode, setBillMode] = useState("各自付");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("19:30");
   const [venueQuery, setVenueQuery] = useState("");
+  const [budget, setBudget] = useState("");
+  const [capacity, setCapacity] = useState("4");
   const [showVenueMap, setShowVenueMap] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [apiError, setApiError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [created, setCreated] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState({ name: "PASTA & CO.", address: "台北市信義區松壽路", lat: 25.0339, lng: 121.5645 });
   const billModes = ["我請客", "各自付", "男請女"];
   const venueSuggestions = [
@@ -253,6 +262,73 @@ function CreatePage() {
     setShowSuggestions(false);
     setShowVenueMap(true);
   };
+  const handlePreview = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!title.trim() || !date || !venueQuery.trim()) {
+      setFormError("請先填妥飯局主題、日期與餐廳／地點，再預覽飯局。");
+      return;
+    }
+    setFormError("");
+    setApiError("");
+    setShowPreview(true);
+  };
+  const confirmCreate = async () => {
+    setIsSubmitting(true);
+    setApiError("");
+    try {
+      const paymentMode = billMode === "我請客" ? "host_treats" : billMode === "男請女" ? "men_treat_women" : "split_bill";
+      const numericBudget = Number.parseInt(budget.replace(/\D/g, ""), 10);
+      const localStart = new Date(`${date}T${time}:00+08:00`);
+      const response = await fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          eventStartAt: localStart.toISOString(),
+          venueAddress: selectedVenue.address,
+          restaurantName: venueQuery.trim(),
+          capacity: Number.parseInt(capacity, 10) || 4,
+          paymentMode,
+          budgetMin: Number.isFinite(numericBudget) ? numericBudget : undefined,
+          budgetMax: Number.isFinite(numericBudget) ? numericBudget : undefined,
+          depositPoints: 100,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setApiError(response.status === 401 ? "請先登入後再建立飯局。" : result.error === "INVALID_EVENT" ? "飯局資料格式有誤，請回到表單確認內容。" : "目前無法建立飯局，請稍後再試。");
+        return;
+      }
+      const event = result.event as { id?: string; title?: string };
+      const eventDate = new Date(`${date}T${time}:00+08:00`);
+      const createdCard: DiningEvent = {
+        id: event.id ?? `local-${Date.now()}`,
+        title: event.title ?? title.trim(),
+        cuisine: "新建立飯局 · 等待報名",
+        date: new Intl.DateTimeFormat("zh-TW", { month: "numeric", day: "numeric", weekday: "short" }).format(eventDate),
+        time,
+        restaurant: venueQuery.trim(),
+        neighborhood: selectedVenue.address.split("市").pop()?.slice(0, 3) || "待確認",
+        capacity: `1 / ${capacity || "4"} 人`,
+        payment: billMode,
+        paymentShort: billMode === "各自付" ? "AA 制" : billMode,
+        budget: budget ? `$${budget}` : "預算待補",
+        host: "你",
+        hostInitial: "你",
+        color: "from-emerald-500 via-teal-500 to-cyan-400",
+        accent: "bg-emerald-500",
+        lat: selectedVenue.lat,
+        lng: selectedVenue.lng,
+      };
+      setShowPreview(false);
+      setCreated(true);
+      onCreated(createdCard);
+    } catch {
+      setApiError("連線暫時中斷，請檢查網路後再試。");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <section className="page-enter px-4 pb-28 pt-5">
       <div className="rounded-[30px] bg-white/75 p-5 shadow-[0_18px_45px_rgba(55,28,98,0.12)] backdrop-blur-xl">
@@ -260,20 +336,23 @@ function CreatePage() {
         <h1 className="mt-1 text-[29px] font-black tracking-[-0.04em] text-slate-950">發起一場<br />想認真赴約的晚餐。</h1>
         <p className="mt-3 text-sm leading-relaxed text-slate-500">清楚說明期待，讓每一個報名都更接近你的飯局氛圍。</p>
       </div>
-      <form onSubmit={(e) => e.preventDefault()} className="mt-4 space-y-4 rounded-[28px] border border-white/60 bg-white/75 p-4 shadow-[0_18px_45px_rgba(55,28,98,0.1)] backdrop-blur-xl">
+      <form onSubmit={handlePreview} className="mt-4 space-y-4 rounded-[28px] border border-white/60 bg-white/75 p-4 shadow-[0_18px_45px_rgba(55,28,98,0.1)] backdrop-blur-xl">
         <Field label="飯局主題" helper="讓人一眼知道這場飯的感覺">
-          <input className="form-input" placeholder="例如：下班後想聊聊旅行的義式晚餐" />
+          <input value={title} onChange={(event) => setTitle(event.target.value)} className="form-input" placeholder="例如：下班後想聊聊旅行的義式晚餐" />
         </Field>
         <div className="grid grid-cols-2 gap-3"><Field label="日期"><div className="form-input flex items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-pink-500" /><input aria-label="選擇日期" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-700 outline-none" /></div></Field><Field label="時間"><div className="form-input flex items-center gap-2"><Clock3 className="h-4 w-4 shrink-0 text-pink-500" /><input aria-label="選擇時間" type="time" value={time} onChange={(event) => setTime(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-700 outline-none" /></div></Field></div>
         <Field label="餐廳或地點" helper="支援 Google 地點搜尋與地址自動完成">
-          <div className="relative"><div className="form-input flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-violet-500" /><input value={venueQuery} onChange={(event) => { setVenueQuery(event.target.value); setShowSuggestions(true); }} onFocus={() => setShowSuggestions(true)} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="搜尋餐廳、地標或地址" /><button type="button" aria-label="在地圖確認餐廳位置" onClick={() => setShowVenueMap((open) => !open)} className="pressable grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-violet-100 text-violet-700"><MapPin className="h-4 w-4" /></button></div>{showSuggestions && <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-violet-100 bg-white p-1 shadow-xl"><p className="px-3 py-2 text-[11px] font-bold tracking-wide text-violet-500">建議地點</p>{venueSuggestions.map((venue) => <button type="button" key={venue.name} onClick={() => chooseVenue(venue)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-violet-50"><MapPin className="h-4 w-4 text-fuchsia-500" /><span>{venue.name} <small className="block text-xs font-normal text-slate-400">{venue.address}</small></span></button>)}</div>}</div>
+          <div className="relative"><div className="form-input flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-violet-500" /><input value={venueQuery} onChange={(event) => { setVenueQuery(event.target.value); setShowSuggestions(true); setCreated(false); }} onFocus={() => setShowSuggestions(true)} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="搜尋餐廳、地標或地址" /><button type="button" aria-label="在地圖確認餐廳位置" onClick={() => setShowVenueMap((open) => !open)} className="pressable grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-violet-100 text-violet-700"><MapPin className="h-4 w-4" /></button></div>{showSuggestions && <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-violet-100 bg-white p-1 shadow-xl"><p className="px-3 py-2 text-[11px] font-bold tracking-wide text-violet-500">建議地點</p>{venueSuggestions.map((venue) => <button type="button" key={venue.name} onClick={() => chooseVenue(venue)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-violet-50"><MapPin className="h-4 w-4 text-fuchsia-500" /><span>{venue.name} <small className="block text-xs font-normal text-slate-400">{venue.address}</small></span></button>)}</div>}</div>
         </Field>
         {showVenueMap && <div className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-violet-50 px-3.5 py-2.5"><div><p className="text-xs font-black text-slate-800">地圖確認位置</p><p className="mt-0.5 text-[11px] text-slate-500">{selectedVenue.name} · {selectedVenue.address}</p></div><button type="button" onClick={() => setShowVenueMap(false)} className="pressable rounded-lg p-1.5 text-slate-400" aria-label="關閉地圖"><X className="h-4 w-4" /></button></div><MapView className="h-[250px]" initialCenter={{ lat: selectedVenue.lat, lng: selectedVenue.lng }} initialZoom={16} onMapReady={(map) => { const marker = new google.maps.marker.AdvancedMarkerElement({ map, position: { lat: selectedVenue.lat, lng: selectedVenue.lng }, title: selectedVenue.name }); marker.addListener("click", () => setShowVenueMap(false)); }} /></div>}
         <Field label="買單方式"><div className="grid grid-cols-3 gap-2">{billModes.map((mode) => <button type="button" key={mode} onClick={() => setBillMode(mode)} className={`pressable rounded-xl border px-2 py-2.5 text-xs font-bold ${billMode === mode ? "border-violet-600 bg-violet-600 text-white" : "border-slate-100 bg-slate-50 text-slate-500"}`}>{mode}</button>)}</div></Field>
-        <div className="grid grid-cols-2 gap-3"><Field label="每人預算"><div className="form-input text-slate-400">例如 $800</div></Field><Field label="人數上限"><div className="form-input text-slate-400">4 人</div></Field></div>
+        <div className="grid grid-cols-2 gap-3"><Field label="每人預算"><input value={budget} onChange={(event) => setBudget(event.target.value)} className="form-input" placeholder="例如 $800" inputMode="numeric" /></Field><Field label="人數上限"><input value={capacity} onChange={(event) => setCapacity(event.target.value)} className="form-input" placeholder="4 人" inputMode="numeric" /></Field></div>
         <div className="rounded-2xl bg-violet-50 px-3.5 py-3 text-xs leading-relaxed text-violet-800"><ShieldCheck className="mr-1 inline h-4 w-4 text-violet-600" />參與者確認後才會進入聊天室；保證金與取消規則將於報名時清楚提示。</div>
-        <button className="pressable w-full rounded-2xl bg-slate-950 py-3.5 text-sm font-bold text-white shadow-[0_12px_24px_rgba(15,23,42,0.25)]">預覽並發起飯局</button>
+        {formError && <p role="alert" className="rounded-2xl bg-rose-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-rose-700">{formError}</p>}
+        {created && <p role="status" className="rounded-2xl bg-emerald-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-emerald-700"><Check className="mr-1 inline h-4 w-4" />飯局預覽已確認！登入完成後會同步建立至你的飯局清單。</p>}
+        <button type="submit" className="pressable w-full rounded-2xl bg-slate-950 py-3.5 text-sm font-bold text-white shadow-[0_12px_24px_rgba(15,23,42,0.25)]">{created ? "已確認發起飯局" : "預覽並發起飯局"}</button>
       </form>
+      {showPreview && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/45 p-0 backdrop-blur-sm"><section role="dialog" aria-modal="true" aria-label="飯局預覽確認" className="page-enter w-full rounded-t-[32px] bg-[#fcfbff] p-4 pb-8 shadow-2xl"><div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300" /><div className="rounded-[24px] bg-slate-950 p-4 text-white"><p className="text-[11px] font-bold tracking-[0.18em] text-pink-200">TABLE PREVIEW</p><h2 className="mt-2 text-xl font-black">{title}</h2><p className="mt-3 flex items-center gap-2 text-sm text-violet-100"><CalendarDays className="h-4 w-4 text-pink-300" />{date} · {time}</p><p className="mt-2 flex items-center gap-2 text-sm text-violet-100"><MapPin className="h-4 w-4 text-orange-300" />{venueQuery} · {selectedVenue.address}</p></div><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-2xl bg-white p-3 text-xs font-bold text-slate-700 shadow-sm">{billMode}</div><div className="rounded-2xl bg-white p-3 text-xs font-bold text-slate-700 shadow-sm">{budget || "預算待補"} · {capacity || "4"} 人</div></div><div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50 p-3 text-xs leading-relaxed text-violet-900"><ShieldCheck className="mr-1 inline h-4 w-4 text-violet-600" />確認後會建立飯局並寫入你的飯局清單；保證金規則會於送出前清楚提示。</div>{apiError && <p role="alert" className="mt-3 rounded-2xl bg-rose-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-rose-700">{apiError}</p>}<div className="mt-5 flex gap-3"><button type="button" disabled={isSubmitting} onClick={() => setShowPreview(false)} className="pressable flex-1 rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 disabled:opacity-50">返回編輯</button><button type="button" disabled={isSubmitting} onClick={confirmCreate} className="pressable flex-1 rounded-2xl bg-slate-950 py-3 text-sm font-bold text-white disabled:opacity-60">{isSubmitting ? "建立中…" : "確認建立飯局"}</button></div></section></div>}
     </section>
   );
 }
@@ -363,8 +442,16 @@ export default function Home() {
     return tab === "create" || tab === "messages" || tab === "profile" ? tab : "explore";
   });
   const [activeEvent, setActiveEvent] = useState<DiningEvent | null>(null);
+  const [events, setEvents] = useState<DiningEvent[]>(() => DINING_EVENTS);
+  const [creationNotice, setCreationNotice] = useState("");
   const [showPrd, setShowPrd] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "prd");
 
-  const content = showPrd ? <PrdPage onBack={() => setShowPrd(false)} /> : activeTab === "explore" ? <ExplorePage onOpen={setActiveEvent} /> : activeTab === "create" ? <CreatePage /> : activeTab === "messages" ? <MessagesPage /> : <ProfileV2 onOpenPrd={() => setShowPrd(true)} />;
+  const handleEventCreated = (event: DiningEvent) => {
+    setEvents((current) => [event, ...current]);
+    setCreationNotice(`「${event.title}」已建立，現在已顯示在探索清單中。`);
+    setActiveTab("explore");
+  };
+
+  const content = showPrd ? <PrdPage onBack={() => setShowPrd(false)} /> : activeTab === "explore" ? <ExplorePage events={events} notice={creationNotice} onOpen={setActiveEvent} /> : activeTab === "create" ? <CreatePage onCreated={handleEventCreated} /> : activeTab === "messages" ? <MessagesPage /> : <ProfileV2 onOpenPrd={() => setShowPrd(true)} />;
   return <main className="min-h-screen bg-[#17152a] p-0 font-sans text-slate-900 sm:p-5"><div className="phone-shell relative mx-auto min-h-screen max-w-md overflow-hidden bg-[#f7f5ff] sm:min-h-[calc(100vh-40px)] sm:rounded-[34px] sm:shadow-[0_30px_100px_rgba(1,3,30,0.55)]"><div className="ambient-glow ambient-one" /><div className="ambient-glow ambient-two" /> <div className="relative min-h-screen">{content}</div>{!showPrd && <nav className="absolute bottom-0 left-0 right-0 z-40 border-t border-white/70 bg-white/85 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-xl"><div className="grid grid-cols-4">{NAV_ITEMS.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setActiveTab(id)} className="pressable flex flex-col items-center gap-1.5 px-1 py-1.5"><span className={`grid h-9 w-11 place-items-center rounded-xl transition ${activeTab === id ? "bg-slate-950 text-white shadow-lg" : "text-slate-400"}`}><Icon className={`h-[18px] w-[18px] ${id === "create" && activeTab !== id ? "text-fuchsia-500" : ""}`} /></span><span className={`text-[10px] font-bold ${activeTab === id ? "text-slate-950" : "text-slate-400"}`}>{label}</span></button>)}</div></nav>}{activeEvent && <EventDetail event={activeEvent} onClose={() => setActiveEvent(null)} />}</div></main>;
 }

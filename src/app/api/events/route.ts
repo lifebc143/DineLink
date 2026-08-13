@@ -17,8 +17,18 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
-  const parsed = createEventInput.safeParse(await request.json());
+  let requestBody: unknown;
+  try {
+    requestBody = await request.json();
+  } catch {
+    return NextResponse.json({ error: "INVALID_EVENT" }, { status: 400 });
+  }
+  const parsed = createEventInput.safeParse(requestBody);
   if (!parsed.success) return NextResponse.json({ error: "INVALID_EVENT", details: parsed.error.flatten() }, { status: 400 });
-  const [event] = await db.insert(diningEvents).values({ ...parsed.data, eventStartAt: new Date(parsed.data.eventStartAt), hostId: user.id, status: "published" }).returning();
-  return NextResponse.json({ event }, { status: 201 });
+  try {
+    const [event] = await db.insert(diningEvents).values({ ...parsed.data, eventStartAt: new Date(parsed.data.eventStartAt), hostId: user.id, status: "published" }).returning();
+    return NextResponse.json({ event }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "EVENT_CREATE_FAILED" }, { status: 500 });
+  }
 }

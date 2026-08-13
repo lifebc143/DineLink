@@ -9,7 +9,11 @@ vi.mock("@/components/Map", () => ({
   ),
 }));
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("發起飯局表單", () => {
   it("可選擇日期並開啟餐廳地圖確認視圖", () => {
@@ -36,5 +40,93 @@ describe("發起飯局表單", () => {
 
     expect(screen.queryByText("地圖確認位置")).not.toBeNull();
     expect(screen.queryByLabelText("關閉地圖")).not.toBeNull();
+  });
+
+  it("未填必填欄位時會顯示驗證提示", () => {
+    render(<Home />);
+    fireEvent.click(screen.getByText("發起飯局"));
+    fireEvent.click(screen.getByText("預覽並發起飯局"));
+
+    expect(screen.queryByRole("alert")?.textContent).toContain("請先填妥飯局主題、日期與餐廳／地點");
+  });
+
+  it("填妥表單後會呼叫建立飯局 API 並顯示成功狀態", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 201, json: async () => ({ event: { id: "event-1" } }) });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<Home />);
+    fireEvent.click(screen.getByText("發起飯局"));
+    fireEvent.change(screen.getByPlaceholderText("例如：下班後想聊聊旅行的義式晚餐"), { target: { value: "週末義式晚餐" } });
+    fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
+    fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
+    fireEvent.click(screen.getByText("預覽並發起飯局"));
+
+    expect(screen.queryByRole("dialog", { name: "飯局預覽確認" })).not.toBeNull();
+    expect(screen.queryByText("週末義式晚餐")).not.toBeNull();
+    fireEvent.click(screen.getByText("確認建立飯局"));
+
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toContain("現在已顯示在探索清單中");
+    expect(screen.queryByText("週末義式晚餐")).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith("/api/events", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("API 回傳未登入時會在預覽彈窗顯示登入提示", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ error: "UNAUTHENTICATED" }) }));
+    render(<Home />);
+    fireEvent.click(screen.getByText("發起飯局"));
+    fireEvent.change(screen.getByPlaceholderText("例如：下班後想聊聊旅行的義式晚餐"), { target: { value: "週末義式晚餐" } });
+    fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
+    fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
+    fireEvent.click(screen.getByText("預覽並發起飯局"));
+    fireEvent.click(screen.getByText("確認建立飯局"));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("請先登入後再建立飯局");
+  });
+
+  it("API 驗證失敗時會顯示可讀錯誤而不建立飯局", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400, json: async () => ({ error: "INVALID_EVENT" }) }));
+    render(<Home />);
+    fireEvent.click(screen.getByText("發起飯局"));
+    fireEvent.change(screen.getByPlaceholderText("例如：下班後想聊聊旅行的義式晚餐"), { target: { value: "週末義式晚餐" } });
+    fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
+    fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
+    fireEvent.click(screen.getByText("預覽並發起飯局"));
+    fireEvent.click(screen.getByText("確認建立飯局"));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("飯局資料格式有誤");
+    expect(screen.queryByRole("dialog", { name: "飯局預覽確認" })).not.toBeNull();
+  });
+
+  it("網路失敗時會結束建立中狀態並提示重試", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    render(<Home />);
+    fireEvent.click(screen.getByText("發起飯局"));
+    fireEvent.change(screen.getByPlaceholderText("例如：下班後想聊聊旅行的義式晚餐"), { target: { value: "週末義式晚餐" } });
+    fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
+    fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
+    fireEvent.click(screen.getByText("預覽並發起飯局"));
+    fireEvent.click(screen.getByText("確認建立飯局"));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("連線暫時中斷");
+    expect(screen.queryByText("確認建立飯局")).not.toBeNull();
+  });
+
+  it("伺服器 500 時會保留預覽並允許再次確認建立", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({ error: "SERVER_ERROR" }) }));
+    render(<Home />);
+    fireEvent.click(screen.getByText("發起飯局"));
+    fireEvent.change(screen.getByPlaceholderText("例如：下班後想聊聊旅行的義式晚餐"), { target: { value: "週末義式晚餐" } });
+    fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
+    fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
+    fireEvent.click(screen.getByText("預覽並發起飯局"));
+    fireEvent.click(screen.getByText("確認建立飯局"));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("目前無法建立飯局，請稍後再試");
+    expect(screen.queryByRole("dialog", { name: "飯局預覽確認" })).not.toBeNull();
+    expect(screen.queryByText("確認建立飯局")).not.toBeNull();
   });
 });
