@@ -39,7 +39,9 @@
 - [x] 驗證 OAuth 登入入口回傳的 redirect URI 與公開預覽網域一致。
 - [x] 修正 Next.js 正式部署找不到 dist/public 靜態資產的封裝輸出問題。
 - [ ] 建立通過部署驗證的 checkpoint，讓 DineLink 自動發佈為正式網站。
-- [ ] 建立 Next.js standalone Docker 部署設定，讓正式 runtime 直接啟動 App Router 服務。
+- [x] 移除不相容的 standalone Docker 覆寫，改由受管平台透過 dist/index.js 啟動 Next.js runtime。
 - [x] 建立與受管啟動命令相容的 dist/index.js wrapper，避免正式容器執行舊版入口而無法啟動。
 - [ ] 驗證正式站台首頁與公開 API 健康檢查可回應 200，再確認部署成功。
 - [ ] 移除不必要的 Dockerfile，並將 production start 腳本統一為 node dist/index.js 以符合受管部署合約。
+- [ ] 修正正式站 _next/static CSS 與 JavaScript 資產 404，恢復手機版正式網站的完整視覺樣式。
+- [ ] 重新部署靜態資產修正版，並驗證正式網域首頁與 /api/events 均回應 200。
