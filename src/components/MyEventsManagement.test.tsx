@@ -13,7 +13,7 @@ describe("MyEventsManagement 進階飯局管理", () => {
     expect(await screen.findByText("尚未發起飯局")).not.toBeNull();
 
     fireEvent.click(screen.getByText("日曆"));
-    expect(screen.getByText("本月飯局")).not.toBeNull();
+    expect(screen.getByText("本月沒有符合篩選的飯局")).not.toBeNull();
     fireEvent.click(screen.getByText("通知"));
     expect(screen.getByText("目前沒有通知")).not.toBeNull();
     fireEvent.click(screen.getByText("評價"));
@@ -43,5 +43,39 @@ describe("MyEventsManagement 進階飯局管理", () => {
     fireEvent.click(screen.getAllByText("3")[0]!);
     fireEvent.click(screen.getByText("送出評價"));
     expect(fetchMock).toHaveBeenCalledWith("/api/events/event-1/reviews", expect.objectContaining({ method: "POST", body: expect.stringContaining("attendanceNote") }));
+  });
+
+  it("可依主辦與參與分類飯局，並切換該飯局的提醒狀態", async () => {
+    const now = new Date();
+    const payload = { hosted: [{ event: { id: "hosted-event", title: "本月主辦飯局", eventStartAt: now.toISOString(), restaurantName: "餐廳", venueAddress: "地址", status: "published", capacity: 4 }, pendingApplications: [], attendances: [] }], applied: [] };
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/me/events" ? payload : url === "/api/notifications" ? { notifications: [] } : { tasks: [] } })));
+    render(<MyEventsManagement onBack={() => undefined} />);
+    await screen.findByText("本月主辦飯局");
+    fireEvent.click(screen.getByText("日曆"));
+    expect(await screen.findByText("本月主辦飯局")).not.toBeNull();
+    fireEvent.click(screen.getByText("參與"));
+    expect(screen.getByText("本月沒有符合篩選的飯局")).not.toBeNull();
+    fireEvent.click(screen.getByText("主辦"));
+    fireEvent.click(screen.getByText("標記提醒（本裝置）"));
+    expect(screen.getByText("已標記提醒（本裝置）")).not.toBeNull();
+  });
+
+  it("點擊帶有 eventId 的通知會導向對應我的飯局深度連結", async () => {
+    window.history.replaceState({}, "", "/");
+    const fetchMock = vi.fn((url: string, options?: RequestInit) => {
+      if (url === "/api/me/events") return Promise.resolve({ ok: true, status: 200, json: async () => ({ hosted: [], applied: [] }) });
+      if (url === "/api/notifications") return Promise.resolve({ ok: true, status: 200, json: async () => ({ notifications: [{ id: "notice-link", title: "飯局提醒", body: "即將開始", type: "event_reminder", eventId: "event-focus", readAt: null, createdAt: "2026-08-01T12:00:00.000Z" }] }) });
+      if (url === "/api/me/review-tasks") return Promise.resolve({ ok: true, status: 200, json: async () => ({ tasks: [] }) });
+      if (url === "/api/notifications/notice-link/read" && options?.method === "PATCH") return Promise.resolve({ ok: true });
+      return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<MyEventsManagement onBack={() => undefined} />);
+    await screen.findByText("尚未發起飯局");
+    fireEvent.click(screen.getByText("通知 1"));
+    fireEvent.click(await screen.findByText("飯局提醒"));
+    expect(window.location.search).toContain("tab=my-events");
+    expect(window.location.search).toContain("eventId=event-focus");
+    expect(fetchMock).toHaveBeenCalledWith("/api/notifications/notice-link/read", { method: "PATCH" });
   });
 });

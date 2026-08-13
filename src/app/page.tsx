@@ -424,15 +424,25 @@ function ProfileV2({ onOpenPrd, onOpenMyEvents }: { onOpenPrd: () => void; onOpe
           <div><p className="text-base font-black">待累積</p><p className="mt-1 text-[10px] font-bold text-violet-200">出席率</p></div>
         </div>
       </div>
-      <div className="mt-5 rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur-xl">
-        <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-pink-50 text-pink-500"><Heart className="h-5 w-5" /></div><div><p className="text-sm font-black text-slate-900">互評信用檔案</p><p className="mt-0.5 text-xs text-slate-500">完成首場飯局後，可收到匿名互評邀請</p></div></div>
-        <div className="mt-4 flex flex-wrap gap-2">{reviewDimensions.map((dimension) => <span key={dimension} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{dimension} · 尚待累積</span>)}</div>
-      </div>
+      <ProfileInsights />
       <div className="mt-3 rounded-[24px] border border-amber-100 bg-amber-50 p-4"><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-400 text-white"><Crown className="h-5 w-5" /></div><div className="flex-1"><p className="text-sm font-black text-amber-950">DineLink Plus</p><p className="mt-0.5 text-xs text-amber-800">優先曝光與更多精準篩選條件</p></div><ChevronRight className="h-4 w-4 text-amber-700" /></div></div>
       <button onClick={onOpenMyEvents} className="pressable mt-3 flex w-full items-center justify-between rounded-[24px] border border-emerald-100 bg-emerald-50 p-4 text-left"><span className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-600 text-white"><CalendarDays className="h-5 w-5" /></span><span><span className="block text-sm font-black text-emerald-950">我的飯局</span><span className="mt-0.5 block text-xs text-emerald-700">管理我發起、我申請與待審核的飯局</span></span></span><ChevronRight className="h-4 w-4 text-emerald-600" /></button>
       <button onClick={onOpenPrd} className="pressable mt-3 flex w-full items-center justify-between rounded-[24px] border border-violet-100 bg-violet-50 p-4 text-left"><span className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-violet-600 text-white"><Sparkles className="h-5 w-5" /></span><span><span className="block text-sm font-black text-violet-950">產品規格與開發藍圖</span><span className="mt-0.5 block text-xs text-violet-600">查看 MVP 模組、技術架構與 Roadmap</span></span></span><ChevronRight className="h-4 w-4 text-violet-500" /></button>
     </section>
   );
+}
+
+type InsightPayload = { creditScore: number; completedEventCount: number; attendanceRate: number | null; attendanceTotal: number; trend: Array<{ label: string; score: number }>; dimensions: { punctuality: number | null; politeness: number | null; interaction: number | null } };
+
+function ProfileInsights() {
+  const [insights, setInsights] = useState<InsightPayload | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "empty" | "error">("loading");
+  useEffect(() => { let active = true; void fetch("/api/me/insights", { cache: "no-store" }).then(async (response) => { if (!active) return; if (response.status === 401) { setState("empty"); return; } if (!response.ok) { setState("error"); return; } const result = await response.json() as InsightPayload; setInsights(result); setState(result.trend.length || result.attendanceTotal ? "ready" : "empty"); }).catch(() => { if (active) setState("error"); }); return () => { active = false; }; }, []);
+  if (state === "loading") return <div className="mt-5 rounded-[24px] bg-white/80 p-4 text-xs font-semibold text-slate-500 shadow-sm">正在整理你的信用與出席紀錄…</div>;
+  if (state === "empty") return <div className="mt-5 rounded-[24px] border border-violet-100 bg-violet-50 p-4"><p className="text-sm font-black text-violet-950">信用檔案等待第一筆紀錄</p><p className="mt-1 text-xs leading-relaxed text-violet-700">完成飯局並收到互評後，這裡會顯示真實的信用 Rating 趨勢與歷史出席率。</p></div>;
+  if (state === "error" || !insights) return <div className="mt-5 rounded-[24px] border border-amber-100 bg-amber-50 p-4 text-xs leading-relaxed text-amber-800">目前無法載入信用洞察，請稍後重新整理再試。</div>;
+  const steps = Math.max(1, insights.trend.length - 1); const points = insights.trend.map((point, index) => `${(index / steps) * 100},${100 - point.score}`).join(" "); const dimensions: Array<[string, number | null]> = [["準時", insights.dimensions.punctuality], ["禮貌", insights.dimensions.politeness], ["互動", insights.dimensions.interaction]];
+  return <div className="mt-5 rounded-[24px] border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur-xl"><div className="flex items-center justify-between"><div><p className="text-sm font-black text-slate-900">信用 Rating 與出席紀錄</p><p className="mt-0.5 text-xs text-slate-500">依已完成飯局與收到的互評彙整</p></div><span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-black text-violet-700">{insights.creditScore} 分</span></div><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-2xl bg-emerald-50 p-3"><p className="text-lg font-black text-emerald-800">{insights.attendanceRate === null ? "待累積" : `${insights.attendanceRate}%`}</p><p className="mt-1 text-[10px] font-bold text-emerald-700">歷史出席率 · {insights.attendanceTotal} 場已結算</p></div><div className="rounded-2xl bg-slate-50 p-3"><p className="text-lg font-black text-slate-800">{insights.completedEventCount}</p><p className="mt-1 text-[10px] font-bold text-slate-500">已完成飯局</p></div></div>{insights.trend.length > 0 ? <div className="mt-4"><div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">信用 Rating 趨勢</p><p className="text-[10px] text-slate-400">收到互評後累積更新</p></div><svg viewBox="0 0 100 100" preserveAspectRatio="none" className="mt-2 h-20 w-full overflow-visible"><polyline points={points} fill="none" stroke="#7c3aed" strokeWidth="3" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />{insights.trend.map((point, index) => <circle key={`${point.label}-${index}`} cx={(index / steps) * 100} cy={100 - point.score} r="3" fill="#ec4899" vectorEffect="non-scaling-stroke" />)}</svg><div className="mt-1 flex justify-between text-[10px] text-slate-400"><span>{insights.trend[0]?.label}</span><span>{insights.trend[insights.trend.length - 1]?.label}</span></div></div> : <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">尚未收到可呈現趨勢的互評資料。</p>}<div className="mt-3 flex flex-wrap gap-2">{dimensions.map(([label, score]) => <span key={label} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{label} · {score === null ? "待累積" : `${score} / 5`}</span>)}</div></div>;
 }
 
 type MyEventRecord = { id: string; title: string; eventStartAt: string; restaurantName: string | null; venueAddress: string; status: string; capacity: number };
@@ -498,6 +508,8 @@ export default function Home() {
   const [creationNotice, setCreationNotice] = useState("");
   const [showPrd, setShowPrd] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "prd");
   const [showMyEvents, setShowMyEvents] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "my-events");
+
+  useEffect(() => { const syncDeepLink = () => { const tab = new URLSearchParams(window.location.search).get("tab"); if (tab === "my-events") setShowMyEvents(true); }; window.addEventListener("dine-link:navigate", syncDeepLink); return () => window.removeEventListener("dine-link:navigate", syncDeepLink); }, []);
 
   const handleEventCreated = (event: DiningEvent) => {
     setEvents((current) => [event, ...current]);

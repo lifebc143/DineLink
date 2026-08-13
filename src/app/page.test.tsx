@@ -201,4 +201,14 @@ describe("發起飯局表單", () => {
     fireEvent.click(screen.getByText("取消參與並退出聊天室"));
     expect(fetchMock).toHaveBeenCalledWith("/api/applications/55555555-5555-4555-8555-555555555555/cancel", { method: "POST" });
   });
+
+  it("個人頁會顯示信用 Rating 趨勢與歷史出席率洞察", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/me/insights" ? { creditScore: 88, completedEventCount: 4, attendanceRate: 75, attendanceTotal: 4, trend: [{ label: "8/1", score: 86 }, { label: "8/8", score: 88 }], dimensions: { punctuality: 4.5, politeness: 4.8, interaction: 4.2 } } : {} })));
+    render(<Home />);
+    fireEvent.click(screen.getByText("個人主頁"));
+    expect(await screen.findByText("88 分")).not.toBeNull();
+    expect(screen.getByText("75%")).not.toBeNull();
+    expect(screen.getByText("信用 Rating 趨勢")).not.toBeNull();
+    expect(screen.getByText("準時 · 4.5 / 5")).not.toBeNull();
+  });
 });
