@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
   try {
     const publicOrigin = getPublicOrigin(request.headers, request.nextUrl.origin);
     await completeOAuthLogin(code, state, publicOrigin.startsWith("https://"));
-    return NextResponse.redirect(new URL("/", publicOrigin));
+    const postLoginPath = request.cookies.get("dine_link_post_login_path")?.value === "/?tab=create" ? "/?tab=create" : "/";
+    const response = NextResponse.redirect(new URL(postLoginPath, publicOrigin));
+    response.cookies.delete("dine_link_post_login_path");
+    return response;
   }
   catch { return NextResponse.json({ error: "OAuth callback failed" }, { status: 401 }); }
 }
