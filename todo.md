@@ -28,7 +28,7 @@
 - [x] 將飯局、申請、聊天室、出席、保證金、互評與通知 API 遷移至 Next.js Route Handler。
 - [x] 修復 Next.js production build 並以主專案執行建置、型別檢查與手機版預覽驗證。
 - [x] 建立 Next.js + PostgreSQL 主專案的 GitHub 推送指南與必要環境變數清單。
-- [ ] 建立最終 checkpoint，提供可下載／匯出至 GitHub 的統一架構專案版本。
+- [x] 建立最終 checkpoint，提供可下載／匯出至 GitHub 的統一架構專案版本。
 - [x] 補上 Next.js 通知列表與已讀 Route Handlers，完成通知資料的使用者端 API。
 - [x] 為飯局完成、互評、申請審核與保證金流程補上 Route Handler 契約測試。
 - [x] 建立可重複執行的 production build 驗證腳本與 GitHub Actions workflow。
