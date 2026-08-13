@@ -45,3 +45,4 @@
 - [ ] 移除不必要的 Dockerfile，並將 production start 腳本統一為 node dist/index.js 以符合受管部署合約。
 - [ ] 修正正式站 _next/static CSS 與 JavaScript 資產 404，恢復手機版正式網站的完整視覺樣式。
 - [ ] 重新部署靜態資產修正版，並驗證正式網域首頁與 /api/events 均回應 200。
+- [ ] 修復正式網域 CSS 404 後，驗證手機版 Mesh Gradient、字體與卡片樣式與預覽一致。
