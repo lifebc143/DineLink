@@ -15,6 +15,9 @@ const validEvent = {
   eventStartAt: "2026-08-20T11:30:00.000Z",
   venueAddress: "台北市信義區松壽路",
   restaurantName: "PASTA & CO.",
+  placeId: "ChIJd8BlQ2BZwokRAFUEcm_qrcA",
+  latitude: "25.033964",
+  longitude: "121.564472",
   capacity: 4,
   paymentMode: "split_bill",
   budgetMin: 800,
@@ -58,7 +61,7 @@ describe("POST /api/events", () => {
     expect(response.status).toBe(201);
     expect(payload.event).toMatchObject({ id: event.id, title: validEvent.title, status: "published" });
     expect(payload.event.eventStartAt).toBe(new Date(validEvent.eventStartAt).toJSON());
-    expect(values).toHaveBeenCalledWith(expect.objectContaining({ hostId: "9d6ff613-4c18-4ea3-92ca-b8c4b6753430", status: "published" }));
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({ hostId: "9d6ff613-4c18-4ea3-92ca-b8c4b6753430", status: "published", placeId: validEvent.placeId, latitude: validEvent.latitude, longitude: validEvent.longitude }));
   });
 
   it("資料庫例外時回傳 500 EVENT_CREATE_FAILED", async () => {
