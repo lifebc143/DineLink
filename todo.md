@@ -48,3 +48,4 @@
 - [ ] 修復正式網域 CSS 404 後，驗證手機版 Mesh Gradient、字體與卡片樣式與預覽一致。
 - [ ] 將首頁 layout 改為動態渲染，確保 standalone runtime 可在請求時內嵌已建置 CSS。
 - [ ] 修正 dist/index.js 的工作目錄至 .next/standalone，讓正式站能直接服務 _next/static CSS 與 JavaScript bundle。
+- [ ] 將 Next.js 公開資產前綴移出被平台攔截的 /_next 路徑，恢復 JavaScript bundle 載入與前端互動。
