@@ -157,4 +157,48 @@ describe("發起飯局表單", () => {
     expect(screen.queryByText(/PostgreSQL \+ Drizzle ORM，將飯局、申請、聊天與評價拆分為獨立 Entity/)).not.toBeNull();
     expect(screen.queryByText("保證金")).toBeNull();
   });
+
+  it("個人頁可開啟我的飯局並讀取我發起與我申請的清單", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ hosted: [], applied: [] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<Home />);
+    fireEvent.click(screen.getByText("個人主頁"));
+    fireEvent.click(screen.getByText("我的飯局"));
+
+    expect(await screen.findByText("尚未發起飯局")).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith("/api/me/events", { cache: "no-store" });
+  });
+
+  it("未登入時我的飯局會顯示登入提示", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ error: "UNAUTHENTICATED" }) }));
+    render(<Home />);
+    fireEvent.click(screen.getByText("個人主頁"));
+    fireEvent.click(screen.getByText("我的飯局"));
+
+    expect((await screen.findByText("請先登入，才能查看與管理你的飯局。")).textContent).toContain("請先登入");
+  });
+
+  it("我的飯局可切換主辦與申請視圖，並呼叫核准與取消操作", async () => {
+    const payload = {
+      hosted: [{ event: { id: "11111111-1111-4111-8111-111111111111", title: "主辦人飯局", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "PASTA & CO.", venueAddress: "台北市信義區松壽路", status: "published", capacity: 4 }, pendingApplications: [{ application: { id: "22222222-2222-4222-8222-222222222222", introduction: "期待一起聊天" }, applicant: { displayName: "小安", avatarUrl: null } }], attendances: [{ attendance: { id: "33333333-3333-4333-8333-333333333333", userId: "44444444-4444-4444-8444-444444444444", status: "confirmed" }, member: { displayName: "小晴", avatarUrl: null } }] }],
+      applied: [{ application: { id: "55555555-5555-4555-8555-555555555555", status: "approved", introduction: null }, event: { id: "66666666-6666-4666-8666-666666666666", title: "我申請的飯局", eventStartAt: "2026-08-21T11:30:00.000Z", restaurantName: "YAKI NIKU LAB", venueAddress: "台北市大安區光復南路", status: "published", capacity: 4 }, host: { displayName: "Mia" } }],
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => payload });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<Home />);
+    fireEvent.click(screen.getByText("個人主頁"));
+    fireEvent.click(screen.getByText("我的飯局"));
+
+    expect(await screen.findByText("小安")).not.toBeNull();
+    expect(screen.queryByText("小晴")).not.toBeNull();
+    fireEvent.click(screen.getByText("查看取消規則明細"));
+    expect(screen.queryByText(/申請者可在飯局開始前取消/)).not.toBeNull();
+    fireEvent.click(screen.getByText("拒絕"));
+    expect(fetchMock).toHaveBeenCalledWith("/api/applications/22222222-2222-4222-8222-222222222222/review", expect.objectContaining({ method: "POST", body: JSON.stringify({ decision: "rejected" }) }));
+
+    fireEvent.click(screen.getByText("我已申請的飯局"));
+    expect(await screen.findByText("我申請的飯局")).not.toBeNull();
+    fireEvent.click(screen.getByText("取消參與並退出聊天室"));
+    expect(fetchMock).toHaveBeenCalledWith("/api/applications/55555555-5555-4555-8555-555555555555/cancel", { method: "POST" });
+  });
 });

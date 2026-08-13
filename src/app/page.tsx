@@ -1,6 +1,7 @@
 "use client";
 
 import { MapView } from "@/components/Map";
+import MyEventsManagement from "@/components/MyEventsManagement";
 import {
   ArrowLeft,
   Bell,
@@ -26,7 +27,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 type Tab = "explore" | "create" | "messages" | "profile";
 type ViewMode = "list" | "map";
@@ -407,7 +408,7 @@ function PrdPage({ onBack }: { onBack: () => void }) {
 function DocSection({ title, children }: { title: string; children: React.ReactNode }) { return <div className="mt-5"><h2 className="mb-2.5 px-1 text-base font-black text-slate-950">{title}</h2><div className="space-y-2">{children}</div></div>; }
 function DocItem({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) { return <div className="flex gap-3 rounded-2xl bg-white p-3.5 shadow-sm"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-fuchsia-50 text-fuchsia-500">{icon}</span><div><p className="text-sm font-black text-slate-900">{title}</p><p className="mt-1 text-xs leading-relaxed text-slate-500">{text}</p></div></div>; }
 
-function ProfileV2({ onOpenPrd }: { onOpenPrd: () => void }) {
+function ProfileV2({ onOpenPrd, onOpenMyEvents }: { onOpenPrd: () => void; onOpenMyEvents: () => void }) {
   const reviewDimensions = ["準時", "禮貌", "趣味"];
   return (
     <section className="page-enter px-4 pb-28 pt-5">
@@ -428,10 +429,58 @@ function ProfileV2({ onOpenPrd }: { onOpenPrd: () => void }) {
         <div className="mt-4 flex flex-wrap gap-2">{reviewDimensions.map((dimension) => <span key={dimension} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{dimension} · 尚待累積</span>)}</div>
       </div>
       <div className="mt-3 rounded-[24px] border border-amber-100 bg-amber-50 p-4"><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-400 text-white"><Crown className="h-5 w-5" /></div><div className="flex-1"><p className="text-sm font-black text-amber-950">DineLink Plus</p><p className="mt-0.5 text-xs text-amber-800">優先曝光與更多精準篩選條件</p></div><ChevronRight className="h-4 w-4 text-amber-700" /></div></div>
+      <button onClick={onOpenMyEvents} className="pressable mt-3 flex w-full items-center justify-between rounded-[24px] border border-emerald-100 bg-emerald-50 p-4 text-left"><span className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-600 text-white"><CalendarDays className="h-5 w-5" /></span><span><span className="block text-sm font-black text-emerald-950">我的飯局</span><span className="mt-0.5 block text-xs text-emerald-700">管理我發起、我申請與待審核的飯局</span></span></span><ChevronRight className="h-4 w-4 text-emerald-600" /></button>
       <button onClick={onOpenPrd} className="pressable mt-3 flex w-full items-center justify-between rounded-[24px] border border-violet-100 bg-violet-50 p-4 text-left"><span className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-violet-600 text-white"><Sparkles className="h-5 w-5" /></span><span><span className="block text-sm font-black text-violet-950">產品規格與開發藍圖</span><span className="mt-0.5 block text-xs text-violet-600">查看 MVP 模組、技術架構與 Roadmap</span></span></span><ChevronRight className="h-4 w-4 text-violet-500" /></button>
     </section>
   );
 }
+
+type MyEventRecord = { id: string; title: string; eventStartAt: string; restaurantName: string | null; venueAddress: string; status: string; capacity: number };
+type MyEventsPayload = {
+  hosted: Array<{ event: MyEventRecord; pendingApplications: Array<{ application: { id: string; introduction: string | null }; applicant: { displayName: string; avatarUrl: string | null } }>; attendances: Array<{ attendance: { id: string; userId: string; status: string }; member: { displayName: string; avatarUrl: string | null } }> }>;
+  applied: Array<{ application: { id: string; status: string; introduction: string | null }; event: MyEventRecord; host: { displayName: string } }>;
+};
+
+function MyEventsPage({ onBack }: { onBack: () => void }) {
+  const [data, setData] = useState<MyEventsPayload | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [activeList, setActiveList] = useState<"hosted" | "applied">("hosted");
+  const [reviewing, setReviewing] = useState<string | null>(null);
+  const load = async () => {
+    setLoading(true);
+    const response = await fetch("/api/me/events", { cache: "no-store" }).catch(() => null);
+    if (!response) { setError("目前無法讀取飯局資料，請檢查網路後再試。"); setLoading(false); return; }
+    if (response.status === 401) { setError("請先登入，才能查看與管理你的飯局。"); setLoading(false); return; }
+    if (!response.ok) { setError("目前無法讀取飯局資料，請稍後再試。"); setLoading(false); return; }
+    setData(await response.json() as MyEventsPayload);
+    setError("");
+    setLoading(false);
+  };
+  useEffect(() => { void load(); }, []);
+  const review = async (applicationId: string, decision: "approved" | "rejected") => {
+    setReviewing(applicationId);
+    const response = await fetch(`/api/applications/${applicationId}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision }) }).catch(() => null);
+    setReviewing(null);
+    if (!response?.ok) { setError("審核未完成，請稍後再試。"); return; }
+    await load();
+  };
+  const updateAttendance = async (eventId: string, userId: string, status: "attended" | "late" | "no_show") => {
+    const response = await fetch(`/api/events/${eventId}/attendance`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, status }) }).catch(() => null);
+    if (!response?.ok) { setError("出席紀錄未更新，請稍後再試。"); return; }
+    await load();
+  };
+  const cancelApplication = async (applicationId: string) => {
+    const response = await fetch(`/api/applications/${applicationId}/cancel`, { method: "POST" }).catch(() => null);
+    if (!response?.ok) { setError("目前無法取消申請，請稍後再試。"); return; }
+    await load();
+  };
+  const eventDate = (value: string) => new Date(value).toLocaleString("zh-TW", { month: "numeric", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" });
+  const statusLabel = (status: string) => ({ pending: "等待主辦人審核", approved: "已確認", rejected: "未被接受", withdrawn: "已撤回", cancelled: "已取消" }[status] ?? status);
+  return <section className="page-enter px-4 pb-10 pt-5"><button onClick={onBack} className="pressable mb-5 flex items-center gap-1.5 text-sm font-bold text-slate-600"><ArrowLeft className="h-4 w-4" />返回個人主頁</button><div className="rounded-[30px] bg-slate-950 p-5 text-white shadow-[0_18px_45px_rgba(27,12,62,0.25)]"><p className="text-[11px] font-bold tracking-[0.2em] text-emerald-200">MY DINING PLANS</p><h1 className="mt-2 text-[29px] font-black tracking-[-0.04em]">我的飯局</h1><p className="mt-2 text-sm leading-relaxed text-emerald-100">追蹤我發起與我申請的飯局，審核成員並保留取消、出席與信用紀錄。</p></div><div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-white/80 p-1.5 shadow-sm"><button onClick={() => setActiveList("hosted")} className={`pressable rounded-xl py-2.5 text-sm font-bold ${activeList === "hosted" ? "bg-emerald-600 text-white" : "text-slate-500"}`}>我發起的飯局</button><button onClick={() => setActiveList("applied")} className={`pressable rounded-xl py-2.5 text-sm font-bold ${activeList === "applied" ? "bg-emerald-600 text-white" : "text-slate-500"}`}>我已申請的飯局</button></div>{loading && <div className="mt-4 rounded-2xl bg-white/80 p-5 text-center text-sm font-semibold text-slate-500">正在讀取你的飯局…</div>}{error && <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900"><p>{error}</p>{error.startsWith("請先登入") ? <a href="/api/auth/login" className="mt-3 inline-flex rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white">登入並查看我的飯局</a> : <button onClick={() => void load()} className="mt-3 rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white">重新讀取</button>}</div>}{!loading && !error && activeList === "hosted" && <div className="mt-4 space-y-3">{data?.hosted.length === 0 && <EmptyMyEvents title="尚未發起飯局" text="發起第一場飯局後，可在此審核申請與管理已確認成員。" />}{data?.hosted.map(({ event, pendingApplications, attendances }) => <div key={event.id} className="rounded-[24px] bg-white p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-slate-900">{event.title}</p><p className="mt-1 text-xs text-slate-500">{eventDate(event.eventStartAt)} · {event.restaurantName || event.venueAddress}</p></div><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">{event.status}</span></div><div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-3 text-center"><div><p className="text-base font-black text-slate-900">{pendingApplications.length}</p><p className="text-[10px] font-bold text-slate-500">待審核申請</p></div><div><p className="text-base font-black text-slate-900">{attendances.length} / {event.capacity}</p><p className="text-[10px] font-bold text-slate-500">已確認成員</p></div></div>{pendingApplications.length > 0 && <div className="mt-3 space-y-2"><p className="text-xs font-black text-slate-700">待審核成員</p>{pendingApplications.map(({ application, applicant }) => <div key={application.id} className="rounded-2xl border border-slate-100 p-3"><p className="text-sm font-bold text-slate-800">{applicant.displayName}</p><p className="mt-1 text-xs text-slate-500">{application.introduction || "尚未留下自我介紹"}</p><div className="mt-3 flex gap-2"><button disabled={reviewing === application.id} onClick={() => void review(application.id, "approved")} className="pressable flex-1 rounded-xl bg-emerald-600 py-2 text-xs font-bold text-white disabled:opacity-50">核准</button><button disabled={reviewing === application.id} onClick={() => void review(application.id, "rejected")} className="pressable flex-1 rounded-xl bg-slate-100 py-2 text-xs font-bold text-slate-600 disabled:opacity-50">拒絕</button></div></div>)}</div>}<div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3"><p className="text-xs font-black text-emerald-950">已確認成員與出席紀錄</p>{attendances.length === 0 ? <p className="mt-1 text-xs text-emerald-800">尚無已確認成員。</p> : <div className="mt-2 space-y-2">{attendances.map(({ attendance, member }) => <div key={attendance.id} className="rounded-xl bg-white p-2.5"><div className="flex items-center justify-between gap-2"><span className="text-xs font-bold text-slate-800">{member.displayName}</span><span className="text-[10px] font-bold text-emerald-700">{attendance.status}</span></div><div className="mt-2 grid grid-cols-3 gap-1"><button onClick={() => void updateAttendance(event.id, attendance.userId, "attended")} className="rounded-lg bg-emerald-600 py-1.5 text-[10px] font-bold text-white">出席</button><button onClick={() => void updateAttendance(event.id, attendance.userId, "late")} className="rounded-lg bg-amber-100 py-1.5 text-[10px] font-bold text-amber-800">遲到</button><button onClick={() => void updateAttendance(event.id, attendance.userId, "no_show")} className="rounded-lg bg-rose-100 py-1.5 text-[10px] font-bold text-rose-700">爽約</button></div></div>)}</div>}<p className="mt-2 text-[11px] leading-relaxed text-emerald-800">取消規則：申請者可在飯局開始前取消；已確認參與者取消後會退出聊天室，主辦人可更新出席紀錄。</p></div></div>)}</div>}{!loading && !error && activeList === "applied" && <div className="mt-4 space-y-3">{data?.applied.length === 0 && <EmptyMyEvents title="尚未申請飯局" text="在探索頁選擇合適的飯局送出申請，審核結果會顯示在這裡。" />}{data?.applied.map(({ application, event, host }) => <div key={application.id} className="rounded-[24px] bg-white p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-slate-900">{event.title}</p><p className="mt-1 text-xs text-slate-500">主辦人 {host.displayName} · {eventDate(event.eventStartAt)}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${application.status === "approved" ? "bg-emerald-50 text-emerald-700" : application.status === "pending" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{statusLabel(application.status)}</span></div><p className="mt-3 text-xs leading-relaxed text-slate-500">{application.status === "approved" ? "你已是確認成員，可進入群組聊天室並留意開始前提醒。" : "申請狀態與取消規則會全程保留；主辦人審核後會以通知提醒。"}</p>{["pending", "approved"].includes(application.status) && <button onClick={() => void cancelApplication(application.id)} className="pressable mt-3 w-full rounded-xl border border-rose-100 bg-rose-50 py-2 text-xs font-bold text-rose-700">{application.status === "approved" ? "取消參與並退出聊天室" : "取消申請"}</button>}</div>)}</div>}</section>;
+}
+
+function EmptyMyEvents({ title, text }: { title: string; text: string }) { return <div className="rounded-[24px] border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center"><CalendarDays className="mx-auto h-7 w-7 text-emerald-500" /><p className="mt-3 text-sm font-black text-emerald-950">{title}</p><p className="mt-1 text-xs leading-relaxed text-emerald-800">{text}</p></div>; }
 
 function EventDetail({ event, onClose }: { event: DiningEvent; onClose: () => void }) {
   const [applied, setApplied] = useState(false);
@@ -448,6 +497,7 @@ export default function Home() {
   const [events, setEvents] = useState<DiningEvent[]>(() => DINING_EVENTS);
   const [creationNotice, setCreationNotice] = useState("");
   const [showPrd, setShowPrd] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "prd");
+  const [showMyEvents, setShowMyEvents] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "my-events");
 
   const handleEventCreated = (event: DiningEvent) => {
     setEvents((current) => [event, ...current]);
@@ -455,6 +505,6 @@ export default function Home() {
     setActiveTab("explore");
   };
 
-  const content = showPrd ? <PrdPage onBack={() => setShowPrd(false)} /> : activeTab === "explore" ? <ExplorePage events={events} notice={creationNotice} onOpen={setActiveEvent} /> : activeTab === "create" ? <CreatePage onCreated={handleEventCreated} /> : activeTab === "messages" ? <MessagesPage /> : <ProfileV2 onOpenPrd={() => setShowPrd(true)} />;
-  return <main className="min-h-screen bg-[#17152a] p-0 font-sans text-slate-900 sm:p-5"><div className="phone-shell relative mx-auto min-h-screen max-w-md overflow-hidden bg-[#f7f5ff] sm:min-h-[calc(100vh-40px)] sm:rounded-[34px] sm:shadow-[0_30px_100px_rgba(1,3,30,0.55)]"><div className="ambient-glow ambient-one" /><div className="ambient-glow ambient-two" /> <div className="relative min-h-screen">{content}</div>{!showPrd && <nav className="absolute bottom-0 left-0 right-0 z-40 border-t border-white/70 bg-white/85 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-xl"><div className="grid grid-cols-4">{NAV_ITEMS.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setActiveTab(id)} className="pressable flex flex-col items-center gap-1.5 px-1 py-1.5"><span className={`grid h-9 w-11 place-items-center rounded-xl transition ${activeTab === id ? "bg-slate-950 text-white shadow-lg" : "text-slate-400"}`}><Icon className={`h-[18px] w-[18px] ${id === "create" && activeTab !== id ? "text-fuchsia-500" : ""}`} /></span><span className={`text-[10px] font-bold ${activeTab === id ? "text-slate-950" : "text-slate-400"}`}>{label}</span></button>)}</div></nav>}{activeEvent && <EventDetail event={activeEvent} onClose={() => setActiveEvent(null)} />}</div></main>;
+  const content = showPrd ? <PrdPage onBack={() => setShowPrd(false)} /> : showMyEvents ? <MyEventsManagement onBack={() => setShowMyEvents(false)} /> : activeTab === "explore" ? <ExplorePage events={events} notice={creationNotice} onOpen={setActiveEvent} /> : activeTab === "create" ? <CreatePage onCreated={handleEventCreated} /> : activeTab === "messages" ? <MessagesPage /> : <ProfileV2 onOpenPrd={() => setShowPrd(true)} onOpenMyEvents={() => setShowMyEvents(true)} />;
+  return <main className="min-h-screen bg-[#17152a] p-0 font-sans text-slate-900 sm:p-5"><div className="phone-shell relative mx-auto min-h-screen max-w-md overflow-hidden bg-[#f7f5ff] sm:min-h-[calc(100vh-40px)] sm:rounded-[34px] sm:shadow-[0_30px_100px_rgba(1,3,30,0.55)]"><div className="ambient-glow ambient-one" /><div className="ambient-glow ambient-two" /> <div className="relative min-h-screen">{content}</div>{!showPrd && !showMyEvents && <nav className="absolute bottom-0 left-0 right-0 z-40 border-t border-white/70 bg-white/85 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-xl"><div className="grid grid-cols-4">{NAV_ITEMS.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setActiveTab(id)} className="pressable flex flex-col items-center gap-1.5 px-1 py-1.5"><span className={`grid h-9 w-11 place-items-center rounded-xl transition ${activeTab === id ? "bg-slate-950 text-white shadow-lg" : "text-slate-400"}`}><Icon className={`h-[18px] w-[18px] ${id === "create" && activeTab !== id ? "text-fuchsia-500" : ""}`} /></span><span className={`text-[10px] font-bold ${activeTab === id ? "text-slate-950" : "text-slate-400"}`}>{label}</span></button>)}</div></nav>}{activeEvent && <EventDetail event={activeEvent} onClose={() => setActiveEvent(null)} />}</div></main>;
 }
