@@ -237,7 +237,22 @@ function ExplorePage({ onOpen }: { onOpen: (event: DiningEvent) => void }) {
 function CreatePage() {
   const [billMode, setBillMode] = useState("各自付");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("19:30");
+  const [venueQuery, setVenueQuery] = useState("");
+  const [showVenueMap, setShowVenueMap] = useState(false);
+  const [selectedVenue, setSelectedVenue] = useState({ name: "PASTA & CO.", address: "台北市信義區松壽路", lat: 25.0339, lng: 121.5645 });
   const billModes = ["我請客", "各自付", "男請女"];
+  const venueSuggestions = [
+    { name: "PASTA & CO.", address: "台北市信義區松壽路", lat: 25.0339, lng: 121.5645 },
+    { name: "YAKI NIKU LAB", address: "台北市大安區光復南路", lat: 25.033, lng: 121.543 },
+  ];
+  const chooseVenue = (venue: typeof selectedVenue) => {
+    setSelectedVenue(venue);
+    setVenueQuery(venue.name);
+    setShowSuggestions(false);
+    setShowVenueMap(true);
+  };
   return (
     <section className="page-enter px-4 pb-28 pt-5">
       <div className="rounded-[30px] bg-white/75 p-5 shadow-[0_18px_45px_rgba(55,28,98,0.12)] backdrop-blur-xl">
@@ -249,10 +264,11 @@ function CreatePage() {
         <Field label="飯局主題" helper="讓人一眼知道這場飯的感覺">
           <input className="form-input" placeholder="例如：下班後想聊聊旅行的義式晚餐" />
         </Field>
-        <div className="grid grid-cols-2 gap-3"><Field label="日期"><div className="form-input flex items-center gap-2"><CalendarDays className="h-4 w-4 text-pink-500" /><span>選擇日期</span></div></Field><Field label="時間"><div className="form-input flex items-center gap-2"><Clock3 className="h-4 w-4 text-pink-500" /><span>19:30</span></div></Field></div>
+        <div className="grid grid-cols-2 gap-3"><Field label="日期"><div className="form-input flex items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-pink-500" /><input aria-label="選擇日期" type="date" value={date} onChange={(event) => setDate(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-700 outline-none" /></div></Field><Field label="時間"><div className="form-input flex items-center gap-2"><Clock3 className="h-4 w-4 shrink-0 text-pink-500" /><input aria-label="選擇時間" type="time" value={time} onChange={(event) => setTime(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-700 outline-none" /></div></Field></div>
         <Field label="餐廳或地點" helper="支援 Google 地點搜尋與地址自動完成">
-          <div className="relative"><div className="form-input flex items-center gap-2"><MapPin className="h-4 w-4 text-violet-500" /><input onFocus={() => setShowSuggestions(true)} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="搜尋餐廳、地標或地址" /></div>{showSuggestions && <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-2xl border border-violet-100 bg-white p-1 shadow-xl"><button type="button" onClick={() => setShowSuggestions(false)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-violet-50"><MapPin className="h-4 w-4 text-fuchsia-500" /><span>PASTA & CO. <small className="block text-xs font-normal text-slate-400">台北市信義區松壽路</small></span></button><button type="button" onClick={() => setShowSuggestions(false)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-violet-50"><MapPin className="h-4 w-4 text-fuchsia-500" /><span>YAKI NIKU LAB <small className="block text-xs font-normal text-slate-400">台北市大安區光復南路</small></span></button></div>}</div>
+          <div className="relative"><div className="form-input flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-violet-500" /><input value={venueQuery} onChange={(event) => { setVenueQuery(event.target.value); setShowSuggestions(true); }} onFocus={() => setShowSuggestions(true)} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="搜尋餐廳、地標或地址" /><button type="button" aria-label="在地圖確認餐廳位置" onClick={() => setShowVenueMap((open) => !open)} className="pressable grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-violet-100 text-violet-700"><MapPin className="h-4 w-4" /></button></div>{showSuggestions && <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-violet-100 bg-white p-1 shadow-xl"><p className="px-3 py-2 text-[11px] font-bold tracking-wide text-violet-500">建議地點</p>{venueSuggestions.map((venue) => <button type="button" key={venue.name} onClick={() => chooseVenue(venue)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 hover:bg-violet-50"><MapPin className="h-4 w-4 text-fuchsia-500" /><span>{venue.name} <small className="block text-xs font-normal text-slate-400">{venue.address}</small></span></button>)}</div>}</div>
         </Field>
+        {showVenueMap && <div className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-violet-50 px-3.5 py-2.5"><div><p className="text-xs font-black text-slate-800">地圖確認位置</p><p className="mt-0.5 text-[11px] text-slate-500">{selectedVenue.name} · {selectedVenue.address}</p></div><button type="button" onClick={() => setShowVenueMap(false)} className="pressable rounded-lg p-1.5 text-slate-400" aria-label="關閉地圖"><X className="h-4 w-4" /></button></div><MapView className="h-[250px]" initialCenter={{ lat: selectedVenue.lat, lng: selectedVenue.lng }} initialZoom={16} onMapReady={(map) => { const marker = new google.maps.marker.AdvancedMarkerElement({ map, position: { lat: selectedVenue.lat, lng: selectedVenue.lng }, title: selectedVenue.name }); marker.addListener("click", () => setShowVenueMap(false)); }} /></div>}
         <Field label="買單方式"><div className="grid grid-cols-3 gap-2">{billModes.map((mode) => <button type="button" key={mode} onClick={() => setBillMode(mode)} className={`pressable rounded-xl border px-2 py-2.5 text-xs font-bold ${billMode === mode ? "border-violet-600 bg-violet-600 text-white" : "border-slate-100 bg-slate-50 text-slate-500"}`}>{mode}</button>)}</div></Field>
         <div className="grid grid-cols-2 gap-3"><Field label="每人預算"><div className="form-input text-slate-400">例如 $800</div></Field><Field label="人數上限"><div className="form-input text-slate-400">4 人</div></Field></div>
         <div className="rounded-2xl bg-violet-50 px-3.5 py-3 text-xs leading-relaxed text-violet-800"><ShieldCheck className="mr-1 inline h-4 w-4 text-violet-600" />參與者確認後才會進入聊天室；保證金與取消規則將於報名時清楚提示。</div>
