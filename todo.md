@@ -39,3 +39,4 @@
 - [x] 驗證 OAuth 登入入口回傳的 redirect URI 與公開預覽網域一致。
 - [x] 修正 Next.js 正式部署找不到 dist/public 靜態資產的封裝輸出問題。
 - [ ] 建立通過部署驗證的 checkpoint，讓 DineLink 自動發佈為正式網站。
+- [ ] 建立 Next.js standalone Docker 部署設定，讓正式 runtime 直接啟動 App Router 服務。
