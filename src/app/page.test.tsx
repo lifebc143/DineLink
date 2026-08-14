@@ -12,6 +12,7 @@ vi.mock("@/components/Map", () => ({
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState({}, "", "/");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -317,6 +318,23 @@ describe("發起飯局表單", () => {
     expect(screen.getByRole("menu", { name: "帳號選單" }).textContent).toContain("目前登入：Life Onca");
     fireEvent.click(screen.getByRole("menuitem", { name: "登出此帳號" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", { method: "POST" });
+  });
+
+  it("admin 角色可從帳號選單進入營運後台並讀取會員統計", async () => {
+    const fetchMock = vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => {
+      if (url === "/api/auth/session") return { user: { displayName: "Admin Life", role: "admin" } };
+      if (url === "/api/admin/overview") return { metrics: { registeredMembers: 42, verifiedMembers: 18, totalEvents: 12, publishedEvents: 8, totalApplications: 25, pendingApplications: 3, totalAttendances: 20, noShowCount: 2 }, recentMembers: [] };
+      return { events: [] };
+    } }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<Home />);
+    fireEvent.click(await screen.findByLabelText("開啟 Admin Life 的個人主頁"));
+    fireEvent.click(screen.getByLabelText("更多帳號設定"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "開啟 Admin 後台" }));
+    expect(await screen.findByText("營運後台")).not.toBeNull();
+    expect(screen.getByText("已註冊會員")).not.toBeNull();
+    expect(screen.getByText("42")).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith("/api/admin/overview", { cache: "no-store" });
   });
 
   it("未登入時首頁頂部保留 OAuth 登入入口", async () => {
