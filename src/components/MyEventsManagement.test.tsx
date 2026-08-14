@@ -78,4 +78,23 @@ describe("MyEventsManagement 進階飯局管理", () => {
     expect(window.location.search).toContain("eventId=event-focus");
     expect(fetchMock).toHaveBeenCalledWith("/api/notifications/notice-link/read", { method: "PATCH" });
   });
+
+  it("主辦人可編輯飯局內容，並清楚查看店名與完整地址", async () => {
+    const hosted = { id: "edit-event", title: "原始飯局", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "原始店名", venueAddress: "台北市信義區松壽路 20 號 2 樓", paymentMode: "split_bill", budgetMin: 800, status: "published", capacity: 4 };
+    const fetchMock = vi.fn((url: string, options?: RequestInit) => {
+      if (url === "/api/me/events") return Promise.resolve({ ok: true, status: 200, json: async () => ({ hosted: [{ event: hosted, pendingApplications: [], attendances: [] }], applied: [] }) });
+      if (url === "/api/notifications") return Promise.resolve({ ok: true, status: 200, json: async () => ({ notifications: [] }) });
+      if (url === "/api/me/review-tasks") return Promise.resolve({ ok: true, status: 200, json: async () => ({ tasks: [] }) });
+      if (url === "/api/events/edit-event" && options?.method === "PUT") return Promise.resolve({ ok: true, status: 200, json: async () => ({ event: { ...hosted, title: "更新後飯局" } }) });
+      return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<MyEventsManagement onBack={() => undefined} />);
+    expect(await screen.findByText("店名：原始店名")).not.toBeNull();
+    expect(screen.getByText("完整地址：台北市信義區松壽路 20 號 2 樓")).not.toBeNull();
+    fireEvent.click(screen.getByText("編輯內容"));
+    fireEvent.change(screen.getByDisplayValue("原始飯局"), { target: { value: "更新後飯局" } });
+    fireEvent.click(screen.getByText("儲存飯局內容"));
+    expect(fetchMock).toHaveBeenCalledWith("/api/events/edit-event", expect.objectContaining({ method: "PUT", body: expect.stringContaining("更新後飯局") }));
+  });
 });

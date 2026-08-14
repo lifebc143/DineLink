@@ -238,6 +238,18 @@ describe("發起飯局表單", () => {
     expect(getActiveConfirmButton()).not.toBeNull();
   });
 
+  it("探索、飯局詳情與分享文案都會同時呈現店名及完整地址", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/events" ? { events: [{ event: { id: "address-event", title: "店名地址飯局", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "測試餐館", venueAddress: "台北市信義區松壽路 20 號 2 樓", neighborhood: "信義區", capacity: 4, paymentMode: "split_bill", budgetMin: 600, budgetMax: 800, latitude: "25.0339", longitude: "121.5645", cuisineTags: ["義式料理"] }, host: { displayName: "主辦人" } }] } : {} })));
+    render(<Home />);
+    expect(await screen.findByText("測試餐館 · 台北市信義區松壽路 20 號 2 樓")).not.toBeNull();
+    fireEvent.click(screen.getByLabelText("查看 店名地址飯局 詳情"));
+    expect(await screen.findByText("店名：測試餐館")).not.toBeNull();
+    expect(screen.getByText("地址：台北市信義區松壽路 20 號 2 樓")).not.toBeNull();
+    fireEvent.click(screen.getByLabelText("分享飯局"));
+    const intent = new URL(screen.getByText("分享到 Threads").closest("a")?.getAttribute("href") || "");
+    expect(intent.searchParams.get("text")).toContain("地址：台北市信義區松壽路 20 號 2 樓");
+  });
+
   it("建立成功後，我的飯局會從受保護查詢結果顯示新建立資料", async () => {
     const createdEvent = { id: "created-event", title: "寫入後可見飯局", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "測試餐廳", venueAddress: "台北市信義區", status: "published", capacity: 4 };
     vi.stubGlobal("fetch", vi.fn((url: string, options?: RequestInit) => {
