@@ -306,6 +306,19 @@ describe("發起飯局表單", () => {
     expect(screen.getByText("產品規格與開發藍圖")).not.toBeNull();
   });
 
+  it("個人主頁會同步登入名稱與頭像縮寫，更多選單可安全登出", async () => {
+    const fetchMock = vi.fn((url: string, options?: RequestInit) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/auth/session" ? { user: { displayName: "Life Onca" } } : options?.method === "POST" ? { success: true } : { events: [] } }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<Home />);
+    fireEvent.click(await screen.findByLabelText("開啟 Life Onca 的個人主頁"));
+    expect(screen.getByText("Life Onca")).not.toBeNull();
+    expect(screen.getByText("L")).not.toBeNull();
+    fireEvent.click(screen.getByLabelText("更多帳號設定"));
+    expect(screen.getByRole("menu", { name: "帳號選單" }).textContent).toContain("目前登入：Life Onca");
+    fireEvent.click(screen.getByRole("menuitem", { name: "登出此帳號" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", { method: "POST" });
+  });
+
   it("未登入時首頁頂部保留 OAuth 登入入口", async () => {
     vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/auth/session" ? { user: null } : { events: [] } })));
     render(<Home />);
