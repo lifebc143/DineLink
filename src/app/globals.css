@@ -206,15 +206,4 @@
 @media (prefers-reduced-motion: reduce) { .page-enter { animation: none; } .pressable, .card-lift { transition: none; } }
 
 /* 發起飯局預覽必須覆蓋固定底部導覽，並在所有行動瀏覽器保留確認操作列。 */
-div:has(> section[aria-label="飯局預覽確認"]) { z-index: 70 !important; }
-section[aria-label="飯局預覽確認"] {
-  height: calc(100dvh - 0.5rem) !important;
-  min-height: calc(100dvh - 0.5rem);
-  display: flex;
-  flex-direction: column;
-}
-section[aria-label="飯局預覽確認"] > div:last-child {
-  z-index: 2;
-  margin-top: auto !important;
-  box-shadow: 0 -10px 24px rgba(15, 23, 42, 0.08);
-}
+div:has(> section[aria-label="飯局預覽確認"]) { display: none !important; }

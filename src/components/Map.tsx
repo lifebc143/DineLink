@@ -23,7 +23,7 @@ function loadMapScript() {
   if (!apiKey) return Promise.reject(new Error("NEXT_PUBLIC_FORGE_API_KEY is not configured"));
   mapScriptPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = `${forgeUrl}/v1/maps/proxy/maps/api/js?key=${apiKey}&v=weekly&libraries=marker,places,geocoding,geometry`;
+    script.src = `${forgeUrl}/v1/maps/proxy/maps/api/js?key=${apiKey}&v=weekly&language=zh-TW&region=TW&libraries=marker,places,geocoding,geometry`;
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () => resolve();
@@ -44,7 +44,7 @@ export function MapView({ className = "", initialCenter = { lat: 25.037, lng: 12
     try {
       await loadGoogleMaps();
       if (!containerRef.current || !window.google?.maps) return;
-      const map = new window.google.maps.Map(containerRef.current, { center: initialCenter, zoom: initialZoom, mapId: "DEMO_MAP_ID", mapTypeControl: false, fullscreenControl: false, streetViewControl: false });
+      const map = new window.google.maps.Map(containerRef.current, { center: initialCenter, zoom: initialZoom, mapId: "DEMO_MAP_ID", mapTypeControl: false, fullscreenControl: false, streetViewControl: false, clickableIcons: false });
       onMapReady?.(map);
     } catch {
       if (containerRef.current) containerRef.current.innerHTML = '<div class="grid h-full place-items-center bg-violet-50 p-6 text-center text-sm font-semibold text-violet-700">地圖服務暫時無法載入。請稍後再試，或改用列表檢視。</div>';

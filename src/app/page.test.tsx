@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Home from "./page";
 
@@ -17,6 +17,7 @@ afterEach(() => {
 });
 
 describe("發起飯局表單", () => {
+  const getActiveConfirmButton = () => within(screen.getByRole("dialog", { name: "飯局預覽建立確認" })).getByRole("button", { name: "確認建立飯局" });
   it("可選擇日期並開啟 Google 地點搜尋入口", () => {
     render(<Home />);
 
@@ -71,9 +72,9 @@ describe("發起飯局表單", () => {
     fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
     fireEvent.click(screen.getByText("預覽並發起飯局"));
 
-    expect(screen.queryByRole("dialog", { name: "飯局預覽確認" })).not.toBeNull();
-    expect(screen.queryByText("週末義式晚餐")).not.toBeNull();
-    fireEvent.click(screen.getByText("確認建立飯局"));
+    expect(screen.queryByRole("dialog", { name: "飯局預覽建立確認" })).not.toBeNull();
+    expect(within(screen.getByRole("dialog", { name: "飯局預覽建立確認" })).queryByText("週末義式晚餐")).not.toBeNull();
+    fireEvent.click(getActiveConfirmButton());
 
     const status = await screen.findByRole("status");
     expect(status.textContent).toContain("現在已顯示在探索清單中");
@@ -89,11 +90,11 @@ describe("發起飯局表單", () => {
     fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
     fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
     fireEvent.click(screen.getByText("預覽並發起飯局"));
-    fireEvent.click(screen.getByText("確認建立飯局"));
+    fireEvent.click(getActiveConfirmButton());
 
-    const alert = await screen.findByRole("alert");
+    const alert = await within(screen.getByRole("dialog", { name: "飯局預覽建立確認" })).findByRole("alert");
     expect(alert.textContent).toContain("請先登入後再建立飯局");
-    expect(screen.getByText("立即登入後建立飯局").getAttribute("href")).toBe("/api/auth/login");
+    expect(within(screen.getByRole("dialog", { name: "飯局預覽建立確認" })).getByText("立即登入後建立飯局").getAttribute("href")).toBe("/api/auth/login?returnTo=/?tab=create");
   });
 
   it("API 驗證失敗時會顯示可讀錯誤而不建立飯局", async () => {
@@ -104,11 +105,11 @@ describe("發起飯局表單", () => {
     fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
     fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
     fireEvent.click(screen.getByText("預覽並發起飯局"));
-    fireEvent.click(screen.getByText("確認建立飯局"));
+    fireEvent.click(getActiveConfirmButton());
 
-    const alert = await screen.findByRole("alert");
+    const alert = await within(screen.getByRole("dialog", { name: "飯局預覽建立確認" })).findByRole("alert");
     expect(alert.textContent).toContain("飯局資料格式有誤");
-    expect(screen.queryByRole("dialog", { name: "飯局預覽確認" })).not.toBeNull();
+    expect(screen.queryByRole("dialog", { name: "飯局預覽建立確認" })).not.toBeNull();
   });
 
   it("網路失敗時會結束建立中狀態並提示重試", async () => {
@@ -119,11 +120,11 @@ describe("發起飯局表單", () => {
     fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
     fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
     fireEvent.click(screen.getByText("預覽並發起飯局"));
-    fireEvent.click(screen.getByText("確認建立飯局"));
+    fireEvent.click(getActiveConfirmButton());
 
-    const alert = await screen.findByRole("alert");
+    const alert = await within(screen.getByRole("dialog", { name: "飯局預覽建立確認" })).findByRole("alert");
     expect(alert.textContent).toContain("連線暫時中斷");
-    expect(screen.queryByText("確認建立飯局")).not.toBeNull();
+    expect(getActiveConfirmButton()).not.toBeNull();
   });
 
   it("伺服器 500 時會保留預覽並允許再次確認建立", async () => {
@@ -134,12 +135,12 @@ describe("發起飯局表單", () => {
     fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
     fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
     fireEvent.click(screen.getByText("預覽並發起飯局"));
-    fireEvent.click(screen.getByText("確認建立飯局"));
+    fireEvent.click(getActiveConfirmButton());
 
-    const alert = await screen.findByRole("alert");
+    const alert = await within(screen.getByRole("dialog", { name: "飯局預覽建立確認" })).findByRole("alert");
     expect(alert.textContent).toContain("目前無法建立飯局，請稍後再試");
-    expect(screen.queryByRole("dialog", { name: "飯局預覽確認" })).not.toBeNull();
-    expect(screen.queryByText("確認建立飯局")).not.toBeNull();
+    expect(screen.queryByRole("dialog", { name: "飯局預覽建立確認" })).not.toBeNull();
+    expect(getActiveConfirmButton()).not.toBeNull();
   });
 
   it("飯局預覽與詳情均使用取消規則與出席信用提示，不顯示保證金", () => {
@@ -149,7 +150,7 @@ describe("發起飯局表單", () => {
     fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
     fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
     fireEvent.click(screen.getByText("預覽並發起飯局"));
-    expect(screen.getByRole("dialog", { name: "飯局預覽確認" }).textContent).toContain("取消規則、出席紀錄與信用 rating");
+    expect(screen.getByRole("dialog", { name: "飯局預覽建立確認" }).textContent).toContain("取消規則、出席紀錄與信用 rating");
     expect(screen.queryByText("保證金")).toBeNull();
 
     cleanup();
@@ -233,8 +234,8 @@ describe("發起飯局表單", () => {
     fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
     fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
     fireEvent.click(screen.getByText("預覽並發起飯局"));
-    expect(screen.getByRole("dialog", { name: "飯局預覽確認" }).className).toContain("overflow-y-auto");
-    expect(screen.getByText("確認建立飯局")).not.toBeNull();
+    expect(screen.getByRole("dialog", { name: "飯局預覽建立確認" }).className).toContain("h-[100dvh]");
+    expect(getActiveConfirmButton()).not.toBeNull();
   });
 
   it("建立成功後，我的飯局會從受保護查詢結果顯示新建立資料", async () => {
@@ -253,7 +254,7 @@ describe("發起飯局表單", () => {
     fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
     fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "測試餐廳" } });
     fireEvent.click(screen.getByText("預覽並發起飯局"));
-    fireEvent.click(screen.getByText("確認建立飯局"));
+    fireEvent.click(getActiveConfirmButton());
     await screen.findByRole("status");
     fireEvent.click(screen.getByText("個人主頁"));
     fireEvent.click(screen.getByText("我的飯局"));

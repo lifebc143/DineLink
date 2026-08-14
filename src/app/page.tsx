@@ -2,6 +2,7 @@
 
 import { loadGoogleMaps, MapView } from "@/components/Map";
 import MyEventsManagement from "@/components/MyEventsManagement";
+import PreviewConfirmSheet from "@/components/PreviewConfirmSheet";
 import {
   ArrowLeft,
   Bell,
@@ -274,7 +275,7 @@ function CreatePage({ onCreated }: { onCreated: (event: DiningEvent) => void }) 
     try {
       await loadGoogleMaps();
       const service = new google.maps.places.AutocompleteService();
-      service.getPlacePredictions({ input: query, componentRestrictions: { country: "tw" }, types: ["establishment", "geocode"] }, (predictions, status) => {
+      service.getPlacePredictions({ input: query, componentRestrictions: { country: "tw" }, language: "zh-TW", region: "TW", types: ["establishment", "geocode"] }, (predictions, status) => {
         setPlacesLoading(false);
         if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) { setPlaceSuggestions([]); if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) setPlacesError("暫時找不到建議地點，可直接使用目前輸入的地址。 "); return; }
         setPlaceSuggestions(predictions.slice(0, 5).map((prediction) => ({ placeId: prediction.place_id, name: prediction.structured_formatting.main_text, address: prediction.description })));
@@ -286,12 +287,13 @@ function CreatePage({ onCreated }: { onCreated: (event: DiningEvent) => void }) 
     try {
       await loadGoogleMaps();
       const service = new google.maps.places.PlacesService(document.createElement("div"));
-      service.getDetails({ placeId, fields: ["name", "formatted_address", "geometry", "place_id"] }, (place, status) => {
+      service.getDetails({ placeId, language: "zh-TW", fields: ["name", "formatted_address", "geometry", "place_id"] }, (place, status) => {
         setPlacesLoading(false);
         if (status !== google.maps.places.PlacesServiceStatus.OK || !place?.geometry?.location) { setPlacesError("此地點無法取得座標，請改用完整地址。 "); return; }
         const location = place.geometry.location;
-        setSelectedVenue({ name: place.name || fallbackName, address: place.formatted_address || fallbackName, lat: location.lat(), lng: location.lng(), placeId: place.place_id || placeId });
-        setVenueQuery(place.name || fallbackName); setHasResolvedVenue(true); setPlaceSuggestions([]); setShowSuggestions(false); setShowVenueMap(true);
+        const saveVenue = (localizedAddress?: string) => { setSelectedVenue({ name: place.name || fallbackName, address: localizedAddress || place.formatted_address || fallbackName, lat: location.lat(), lng: location.lng(), placeId: place.place_id || placeId }); setVenueQuery(place.name || fallbackName); setHasResolvedVenue(true); setPlaceSuggestions([]); setShowSuggestions(false); setShowVenueMap(true); };
+        if (!google.maps.Geocoder) { saveVenue(); return; }
+        new google.maps.Geocoder().geocode({ location, language: "zh-TW", region: "TW" }, (results, geocodeStatus) => saveVenue(geocodeStatus === google.maps.GeocoderStatus.OK ? results?.[0]?.formatted_address : undefined));
       });
     } catch { setPlacesLoading(false); setPlacesError("地點詳細資料暫時無法讀取，請稍後重試。 "); }
   };
@@ -302,7 +304,7 @@ function CreatePage({ onCreated }: { onCreated: (event: DiningEvent) => void }) 
     try {
       await loadGoogleMaps();
       const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address: venueQuery }, (results, status) => {
+      geocoder.geocode({ address: venueQuery, region: "TW", language: "zh-TW" }, (results, status) => {
         setPlacesLoading(false);
         if (status !== google.maps.GeocoderStatus.OK || !results?.[0]?.geometry?.location) { setPlacesError("無法定位這個地址，請從建議清單選擇或輸入更完整的地址。 "); return; }
         const result = results[0]; const location = result.geometry.location;
@@ -403,6 +405,7 @@ function CreatePage({ onCreated }: { onCreated: (event: DiningEvent) => void }) 
         {formError && <p role="alert" className="rounded-2xl bg-rose-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-rose-700">{formError}</p>}
         {created && <p role="status" className="rounded-2xl bg-emerald-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-emerald-700"><Check className="mr-1 inline h-4 w-4" />飯局已成功建立，現在已顯示在探索清單與我的飯局中。</p>}
         <button type="submit" className="pressable w-full rounded-2xl bg-slate-950 py-3.5 text-sm font-bold text-white shadow-[0_12px_24px_rgba(15,23,42,0.25)]">{created ? "已確認發起飯局" : "預覽並發起飯局"}</button>
+        {showPreview && <PreviewConfirmSheet title={title} date={date} time={time} venueName={venueQuery} venueAddress={hasResolvedVenue ? selectedVenue.address : "使用輸入的地點文字"} billMode={billMode} budget={budget} capacity={capacity} apiError={apiError} isSubmitting={isSubmitting} onBack={() => setShowPreview(false)} onConfirm={confirmCreate} />}
       </form>
       {showPreview && <div className="fixed inset-0 z-50 flex items-end bg-slate-950/45 p-0 backdrop-blur-sm"><section role="dialog" aria-modal="true" aria-label="飯局預覽確認" className="page-enter max-h-[calc(100dvh-0.5rem)] w-full overflow-y-auto overscroll-contain rounded-t-[32px] bg-[#fcfbff] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl"><div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300" /><div className="rounded-[24px] bg-slate-950 p-4 text-white"><p className="text-[11px] font-bold tracking-[0.18em] text-pink-200">TABLE PREVIEW</p><h2 className="mt-2 text-xl font-black">{title}</h2><p className="mt-3 flex items-center gap-2 text-sm text-violet-100"><CalendarDays className="h-4 w-4 text-pink-300" />{date} · {time}</p><p className="mt-2 flex items-center gap-2 text-sm text-violet-100"><MapPin className="h-4 w-4 text-orange-300" />{venueQuery} · {hasResolvedVenue ? selectedVenue.address : "使用輸入的地點文字"}</p></div><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-2xl bg-white p-3 text-xs font-bold text-slate-700 shadow-sm">{billMode}</div><div className="rounded-2xl bg-white p-3 text-xs font-bold text-slate-700 shadow-sm">{budget || "預算待補"} · {capacity || "4"} 人</div></div><div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50 p-3 text-xs leading-relaxed text-violet-900"><ShieldCheck className="mr-1 inline h-4 w-4 text-violet-600" />確認後會建立飯局並寫入你的飯局清單；取消規則、出席紀錄與信用 rating 會於送出前清楚提示。</div>{apiError && <div role="alert" className="mt-3 rounded-2xl bg-rose-50 px-3.5 py-3 text-xs font-semibold leading-relaxed text-rose-700"><p>{apiError}</p>{apiError.startsWith("請先登入") && <a href="/api/auth/login" className="mt-2 inline-block rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white">立即登入後建立飯局</a>}</div>}<div className="sticky bottom-0 -mx-4 mt-5 flex gap-3 border-t border-slate-100 bg-[#fcfbff]/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur"><button type="button" disabled={isSubmitting} onClick={() => setShowPreview(false)} className="pressable flex-1 rounded-2xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 disabled:opacity-50">返回編輯</button><button type="button" disabled={isSubmitting} onClick={confirmCreate} className="pressable flex-1 rounded-2xl bg-slate-950 py-3 text-sm font-bold text-white disabled:opacity-60">{isSubmitting ? "建立中…" : "確認建立飯局"}</button></div></section></div>}
     </section>
