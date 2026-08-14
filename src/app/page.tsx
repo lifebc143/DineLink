@@ -196,7 +196,7 @@ function ExploreMap({ events, onOpen }: { events: DiningEvent[]; onOpen: (event:
   );
 }
 
-function ExplorePage({ events, notice, onOpen }: { events: DiningEvent[]; notice: string; onOpen: (event: DiningEvent) => void }) {
+function ExplorePage({ events, notice, onOpen, userName, onAccountClick }: { events: DiningEvent[]; notice: string; onOpen: (event: DiningEvent) => void; userName?: string | null; onAccountClick: () => void }) {
   const [view, setView] = useState<ViewMode>("list");
   const [filter, setFilter] = useState("全部");
   const filters = ["全部", "今晚", "週末", "近距離"];
@@ -207,7 +207,7 @@ function ExplorePage({ events, notice, onOpen }: { events: DiningEvent[]; notice
         <div className="mesh-orb mesh-orb-one" />
         <div className="mesh-orb mesh-orb-two" />
         <div className="relative flex items-center justify-between">
-          <a href="/api/auth/login" className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md"><MapPin className="h-3.5 w-3.5 text-orange-300" />登入／台北市</a>
+          {userName ? <button type="button" onClick={onAccountClick} aria-label={`開啟 ${userName} 的個人主頁`} className="pressable flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md"><MapPin className="h-3.5 w-3.5 text-orange-300" />{userName}</button> : <a href="/api/auth/login" className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md"><MapPin className="h-3.5 w-3.5 text-orange-300" />登入／台北市</a>}
           <button aria-label="開啟選單" className="grid h-9 w-9 place-items-center rounded-full bg-white/10 backdrop-blur-md"><Menu className="h-4 w-4" /></button>
         </div>
         <div className="relative mt-7">
@@ -581,8 +581,11 @@ export default function Home() {
   const [creationNotice, setCreationNotice] = useState("");
   const [showPrd, setShowPrd] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "prd");
   const [showMyEvents, setShowMyEvents] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "my-events");
+  const [sessionUser, setSessionUser] = useState<{ displayName?: string | null; name?: string | null } | null>(null);
 
   useEffect(() => { let active = true; void fetch("/api/events", { cache: "no-store" }).then(async (response) => { if (!response.ok || !active) return; const payload = await response.json() as { events?: ApiEventRow[] }; if (active && payload.events?.length) setEvents(payload.events.map(eventFromApi)); }).catch(() => undefined); return () => { active = false; }; }, []);
+
+  useEffect(() => { let active = true; void fetch("/api/auth/session", { cache: "no-store" }).then(async (response) => { const payload = await response.json().catch(() => ({ user: null })); if (active) setSessionUser(payload.user ?? null); }).catch(() => { if (active) setSessionUser(null); }); return () => { active = false; }; }, []);
 
   useEffect(() => { const sharedEventId = new URLSearchParams(window.location.search).get("event"); if (!sharedEventId) return; const sharedEvent = events.find((event) => String(event.id) === sharedEventId); if (sharedEvent) { setActiveTab("explore"); setActiveEvent(sharedEvent); } }, [events]);
 
@@ -594,6 +597,7 @@ export default function Home() {
     setActiveTab("explore");
   };
 
-  const content = showPrd ? <PrdPage onBack={() => setShowPrd(false)} /> : showMyEvents ? <MyEventsManagement onBack={() => setShowMyEvents(false)} /> : activeTab === "explore" ? <ExplorePage events={events} notice={creationNotice} onOpen={setActiveEvent} /> : activeTab === "create" ? <CreatePage onCreated={handleEventCreated} /> : activeTab === "messages" ? <MessagesPage /> : <ProfileV2 onOpenPrd={() => setShowPrd(true)} onOpenMyEvents={() => setShowMyEvents(true)} />;
+  const userName = sessionUser?.displayName || sessionUser?.name || null;
+  const content = showPrd ? <PrdPage onBack={() => setShowPrd(false)} /> : showMyEvents ? <MyEventsManagement onBack={() => setShowMyEvents(false)} /> : activeTab === "explore" ? <ExplorePage events={events} notice={creationNotice} onOpen={setActiveEvent} userName={userName} onAccountClick={() => setActiveTab("profile")} /> : activeTab === "create" ? <CreatePage onCreated={handleEventCreated} /> : activeTab === "messages" ? <MessagesPage /> : <ProfileV2 onOpenPrd={() => setShowPrd(true)} onOpenMyEvents={() => setShowMyEvents(true)} />;
   return <main className="min-h-screen bg-[#17152a] p-0 font-sans text-slate-900 sm:p-5"><div className="phone-shell relative mx-auto min-h-screen max-w-md overflow-hidden bg-[#f7f5ff] sm:min-h-[calc(100vh-40px)] sm:rounded-[34px] sm:shadow-[0_30px_100px_rgba(1,3,30,0.55)]"><div className="ambient-glow ambient-one" /><div className="ambient-glow ambient-two" /> <div className="relative min-h-screen">{content}</div>{!showPrd && !showMyEvents && <nav className="absolute bottom-0 left-0 right-0 z-40 border-t border-white/70 bg-white/85 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-xl"><div className="grid grid-cols-4">{NAV_ITEMS.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setActiveTab(id)} className="pressable flex flex-col items-center gap-1.5 px-1 py-1.5"><span className={`grid h-9 w-11 place-items-center rounded-xl transition ${activeTab === id ? "bg-slate-950 text-white shadow-lg" : "text-slate-400"}`}><Icon className={`h-[18px] w-[18px] ${id === "create" && activeTab !== id ? "text-fuchsia-500" : ""}`} /></span><span className={`text-[10px] font-bold ${activeTab === id ? "text-slate-950" : "text-slate-400"}`}>{label}</span></button>)}</div></nav>}{activeEvent && <EventDetail event={activeEvent} onClose={() => setActiveEvent(null)} shareActions={<EventShareActions event={activeEvent} />} />}</div></main>;
 }
