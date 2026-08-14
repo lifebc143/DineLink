@@ -323,7 +323,7 @@ describe("發起飯局表單", () => {
   it("admin 角色可從帳號選單進入營運後台並讀取會員統計", async () => {
     const fetchMock = vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => {
       if (url === "/api/auth/session") return { user: { displayName: "Admin Life", role: "admin" } };
-      if (url === "/api/admin/overview") return { metrics: { registeredMembers: 42, verifiedMembers: 18, totalEvents: 12, publishedEvents: 8, totalApplications: 25, pendingApplications: 3, totalAttendances: 20, noShowCount: 2 }, recentMembers: [] };
+      if (url === "/api/admin/overview") return { metrics: { registeredMembers: 42, verifiedMembers: 18, pendingVerification: 0, restrictedMembers: 0, totalEvents: 12, publishedEvents: 8, totalApplications: 25, pendingApplications: 3, totalAttendances: 20, noShowCount: 2 }, recentMembers: [] };
       return { events: [] };
     } }));
     vi.stubGlobal("fetch", fetchMock);
@@ -342,5 +342,21 @@ describe("發起飯局表單", () => {
     render(<Home />);
     const loginLink = await screen.findByText("登入／台北市");
     expect(loginLink.closest("a")?.getAttribute("href")).toBe("/api/auth/login");
+  });
+
+  it("未驗證會員可從個人主頁送出簡易驗證申請", async () => {
+    const fetchMock = vi.fn((url: string, options?: RequestInit) => {
+      if (url === "/api/auth/session") return Promise.resolve({ ok: true, status: 200, json: async () => ({ user: { displayName: "Life Onca", role: "member", verificationStatus: "unverified" } }) });
+      if (url === "/api/events") return Promise.resolve({ ok: true, status: 200, json: async () => ({ events: [] }) });
+      if (url === "/api/me/insights") return Promise.resolve({ ok: false, status: 401, json: async () => ({}) });
+      if (url === "/api/me/verification" && options?.method === "POST") return Promise.resolve({ ok: true, status: 200, json: async () => ({ user: { verificationStatus: "pending" } }) });
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<Home />);
+    fireEvent.click(await screen.findByText("個人主頁"));
+    fireEvent.click(await screen.findByText("申請驗證"));
+    expect(await screen.findByText("申請已送出，管理員將進行簡易審核。")).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith("/api/me/verification", { method: "POST" });
   });
 });

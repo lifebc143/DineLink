@@ -22,6 +22,7 @@ import {
  */
 
 export const userRoleEnum = pgEnum("user_role", ["member", "moderator", "admin"]);
+export const accountStatusEnum = pgEnum("account_status", ["active", "suspended", "deactivated"]);
 export const genderEnum = pgEnum("gender", ["woman", "man", "non_binary", "prefer_not_to_say"]);
 export const verificationStatusEnum = pgEnum("verification_status", ["unverified", "pending", "verified", "rejected"]);
 export const eventStatusEnum = pgEnum("event_status", ["draft", "published", "full", "locked", "in_progress", "completed", "cancelled"]);
@@ -44,6 +45,10 @@ export const users = pgTable("users", {
   gender: genderEnum("gender").notNull().default("prefer_not_to_say"),
   bio: varchar("bio", { length: 280 }),
   role: userRoleEnum("role").notNull().default("member"),
+  accountStatus: accountStatusEnum("account_status").notNull().default("active"),
+  suspensionReason: varchar("suspension_reason", { length: 280 }),
+  suspendedAt: timestamp("suspended_at", { withTimezone: true }),
+  deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
   verificationStatus: verificationStatusEnum("verification_status").notNull().default("unverified"),
   pointBalance: integer("point_balance").notNull().default(0),
   creditScore: integer("credit_score").notNull().default(70),

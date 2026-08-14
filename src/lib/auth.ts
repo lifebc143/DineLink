@@ -83,7 +83,8 @@ export async function getCurrentUser() {
     const { payload } = await jwtVerify(token, secret(), { algorithms: ["HS256"] });
     if (typeof payload.subject !== "string") return null;
     const [user] = await db.select().from(users).where(eq(users.id, payload.subject)).limit(1);
-    return user ?? null;
+    if (!user || user.accountStatus !== "active") return null;
+    return user;
   } catch { return null; }
 }
 

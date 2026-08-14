@@ -15,6 +15,13 @@
       "when": 1786619194525,
       "tag": "0001_whole_tomas",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786679927259,
+      "tag": "0002_blue_doctor_strange",
+      "breakpoints": true
     }
   ]
 }

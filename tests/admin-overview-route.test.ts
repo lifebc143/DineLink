@@ -29,13 +29,13 @@ describe("GET /api/admin/overview", () => {
 
   it("管理員可讀取真實會員與營運摘要，不回傳 email 等非必要資料", async () => {
     mocks.getCurrentUser.mockResolvedValue({ id: "admin-1", role: "admin" });
-    const values = [[{ value: 42 }], [{ value: 18 }], [{ value: 12 }], [{ value: 8 }], [{ value: 25 }], [{ value: 3 }], [{ value: 20 }], [{ value: 2 }], [{ id: "member-1", displayName: "新會員", role: "member", verificationStatus: "verified", createdAt: new Date("2026-08-14T00:00:00.000Z") }]];
+    const values = [[{ value: 42 }], [{ value: 18 }], [{ value: 4 }], [{ value: 1 }], [{ value: 12 }], [{ value: 8 }], [{ value: 25 }], [{ value: 3 }], [{ value: 20 }], [{ value: 2 }], [{ id: "member-1", displayName: "新會員", role: "member", verificationStatus: "verified", accountStatus: "active", suspensionReason: null, createdAt: new Date("2026-08-14T00:00:00.000Z") }]];
     let cursor = 0;
     mocks.select.mockImplementation(() => query(values[cursor++]));
     const response = await GET();
     expect(response.status).toBe(200);
     const payload = await response.json();
-    expect(payload.metrics).toEqual({ registeredMembers: 42, verifiedMembers: 18, totalEvents: 12, publishedEvents: 8, totalApplications: 25, pendingApplications: 3, totalAttendances: 20, noShowCount: 2 });
+    expect(payload.metrics).toEqual({ registeredMembers: 42, verifiedMembers: 18, pendingVerification: 4, restrictedMembers: 1, totalEvents: 12, publishedEvents: 8, totalApplications: 25, pendingApplications: 3, totalAttendances: 20, noShowCount: 2 });
     expect(payload.recentMembers[0]).toEqual(expect.objectContaining({ displayName: "新會員", verificationStatus: "verified" }));
     expect(payload.recentMembers[0].email).toBeUndefined();
   });
