@@ -10,6 +10,7 @@ import {
   Check,
   ChevronRight,
   Clock3,
+  Copy,
   Compass,
   Crown,
   Heart,
@@ -21,6 +22,7 @@ import {
   Plus,
   Search,
   Send,
+  Share2,
   ShieldCheck,
   Sparkles,
   Users,
@@ -547,6 +549,21 @@ function MyEventsPage({ onBack }: { onBack: () => void }) {
 
 function EmptyMyEvents({ title, text }: { title: string; text: string }) { return <div className="rounded-[24px] border border-dashed border-emerald-200 bg-emerald-50/60 p-6 text-center"><CalendarDays className="mx-auto h-7 w-7 text-emerald-500" /><p className="mt-3 text-sm font-black text-emerald-950">{title}</p><p className="mt-1 text-xs leading-relaxed text-emerald-800">{text}</p></div>; }
 
+function EventShareActions({ event }: { event: DiningEvent }) {
+  const [copied, setCopied] = useState(false);
+  const shareUrl = typeof window === "undefined" ? `/?event=${encodeURIComponent(String(event.id))}` : `${window.location.origin}/?event=${encodeURIComponent(String(event.id))}`;
+  const shareText = `想找人一起吃「${event.title}」！${event.date} ${event.time}，在 ${event.restaurant}。`;
+  const threadsUrl = `https://www.threads.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}&tag=DineLink`;
+  const copyLink = async () => { try { await navigator.clipboard.writeText(shareUrl); setCopied(true); window.setTimeout(() => setCopied(false), 2200); } catch { window.prompt("請複製此分享連結", shareUrl); } };
+  const systemShare = async () => { if (navigator.share) { try { await navigator.share({ title: event.title, text: shareText, url: shareUrl }); return; } catch (error) { if ((error as DOMException).name === "AbortError") return; } } await copyLink(); };
+  return <section aria-label="分享飯局" className="mt-4 rounded-2xl border border-sky-100 bg-sky-50/80 p-3.5"><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-black text-slate-900">分享這場飯局</p><p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">分享連結僅包含公開飯局資訊，不會公開申請或成員資料。</p></div><Share2 className="h-5 w-5 shrink-0 text-sky-600" /></div><div className="mt-3 grid grid-cols-3 gap-2"><button onClick={() => void copyLink()} className="pressable rounded-xl bg-white px-2 py-2.5 text-[11px] font-bold text-slate-700 shadow-sm">{copied ? "已複製" : <><Copy className="mr-1 inline h-3.5 w-3.5" />複製連結</>}</button><button onClick={() => void systemShare()} className="pressable rounded-xl bg-slate-950 px-2 py-2.5 text-[11px] font-bold text-white"><Share2 className="mr-1 inline h-3.5 w-3.5" />更多分享</button><a href={threadsUrl} target="_blank" rel="noreferrer" className="pressable rounded-xl bg-[#101010] px-2 py-2.5 text-center text-[11px] font-bold text-white">分享到 Threads</a></div></section>;
+}
+
+function EventShareFab({ event }: { event: DiningEvent }) {
+  const [open, setOpen] = useState(false);
+  return <div className="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-4 z-[60]"><button onClick={() => setOpen((value) => !value)} aria-label="分享飯局" className="pressable grid h-12 w-12 place-items-center rounded-full bg-sky-600 text-white shadow-[0_12px_28px_rgba(2,132,199,0.42)]"><Share2 className="h-5 w-5" /></button>{open && <div className="absolute bottom-14 right-0 w-[min(340px,calc(100vw-2rem))] rounded-[24px] bg-white p-1 shadow-[0_18px_45px_rgba(15,23,42,0.22)]"><EventShareActions event={event} /></div>}</div>;
+}
+
 function EventDetail({ event, onClose }: { event: DiningEvent; onClose: () => void }) {
   const [applied, setApplied] = useState(false);
   return <div className="fixed inset-0 z-50 flex items-end bg-slate-950/45 p-0 backdrop-blur-sm"><section className="page-enter max-h-[88vh] w-full overflow-y-auto rounded-t-[32px] bg-[#fcfbff] p-4 pb-8 shadow-2xl"><div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300" /><div className={`relative h-40 overflow-hidden rounded-[25px] bg-gradient-to-br ${event.color} p-4 text-white`}><button onClick={onClose} aria-label="關閉詳情" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/15 backdrop-blur"><X className="h-4 w-4" /></button><span className="inline-flex rounded-full bg-black/15 px-2.5 py-1 text-[10px] font-bold tracking-[0.12em]">{event.cuisine}</span><h2 className="absolute bottom-4 left-4 right-12 text-[25px] font-black leading-tight tracking-[-0.04em]">{event.title}</h2></div><div className="mt-4 flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-sm"><div className={`grid h-10 w-10 place-items-center rounded-2xl ${event.accent} text-sm font-black text-white`}>{event.hostInitial}</div><div><p className="text-sm font-black text-slate-900">由 {event.host} 發起</p><p className="mt-0.5 text-xs text-slate-500">完整資料驗證後顯示信用概況</p></div></div><div className="mt-4 grid grid-cols-2 gap-2">{[[<CalendarDays />, `${event.date} · ${event.time}`], [<MapPin />, `${event.restaurant} · ${event.neighborhood}`], [<Users />, event.capacity], [<WalletCards />, `${event.payment} · ${event.budget}`]].map(([icon, value], index) => <div key={index} className="flex items-center gap-2 rounded-2xl bg-white p-3 text-xs font-bold leading-relaxed text-slate-700 shadow-sm"><span className="text-violet-500">{icon}</span>{value}</div>)}</div><div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50 p-3.5 text-xs leading-relaxed text-violet-950"><ShieldCheck className="mr-1 inline h-4 w-4 text-violet-600" /><b>審核與出席提示：</b>送出申請前會明確顯示取消期限、出席期望與爽約處理方式；主辦人核准後才會進入確認成員名單與聊天室。</div><div className="mt-4 rounded-2xl bg-white p-3.5 shadow-sm"><p className="text-sm font-black text-slate-900">已確認成員</p><div className="mt-3 flex items-center gap-2"><div className="flex -space-x-2"><span className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-fuchsia-500 text-[10px] font-bold text-white">M</span><span className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-violet-500 text-[10px] font-bold text-white">K</span></div><span className="text-xs font-medium text-slate-500">報名核准後顯示成員完整資訊</span></div></div><button onClick={() => setApplied(true)} className={`pressable mt-4 w-full rounded-2xl py-3.5 text-sm font-bold shadow-[0_12px_24px_rgba(15,23,42,0.2)] ${applied ? "bg-emerald-500 text-white" : "bg-slate-950 text-white"}`}>{applied ? "申請已送出，等待主辦人審核" : "送出報名申請"}</button></section></div>;
@@ -566,6 +583,8 @@ export default function Home() {
 
   useEffect(() => { let active = true; void fetch("/api/events", { cache: "no-store" }).then(async (response) => { if (!response.ok || !active) return; const payload = await response.json() as { events?: ApiEventRow[] }; if (active && payload.events?.length) setEvents(payload.events.map(eventFromApi)); }).catch(() => undefined); return () => { active = false; }; }, []);
 
+  useEffect(() => { const sharedEventId = new URLSearchParams(window.location.search).get("event"); if (!sharedEventId) return; const sharedEvent = events.find((event) => String(event.id) === sharedEventId); if (sharedEvent) { setActiveTab("explore"); setActiveEvent(sharedEvent); } }, [events]);
+
   useEffect(() => { const syncDeepLink = () => { const tab = new URLSearchParams(window.location.search).get("tab"); if (tab === "my-events") setShowMyEvents(true); }; window.addEventListener("dine-link:navigate", syncDeepLink); return () => window.removeEventListener("dine-link:navigate", syncDeepLink); }, []);
 
   const handleEventCreated = (event: DiningEvent) => {
@@ -575,5 +594,5 @@ export default function Home() {
   };
 
   const content = showPrd ? <PrdPage onBack={() => setShowPrd(false)} /> : showMyEvents ? <MyEventsManagement onBack={() => setShowMyEvents(false)} /> : activeTab === "explore" ? <ExplorePage events={events} notice={creationNotice} onOpen={setActiveEvent} /> : activeTab === "create" ? <CreatePage onCreated={handleEventCreated} /> : activeTab === "messages" ? <MessagesPage /> : <ProfileV2 onOpenPrd={() => setShowPrd(true)} onOpenMyEvents={() => setShowMyEvents(true)} />;
-  return <main className="min-h-screen bg-[#17152a] p-0 font-sans text-slate-900 sm:p-5"><div className="phone-shell relative mx-auto min-h-screen max-w-md overflow-hidden bg-[#f7f5ff] sm:min-h-[calc(100vh-40px)] sm:rounded-[34px] sm:shadow-[0_30px_100px_rgba(1,3,30,0.55)]"><div className="ambient-glow ambient-one" /><div className="ambient-glow ambient-two" /> <div className="relative min-h-screen">{content}</div>{!showPrd && !showMyEvents && <nav className="absolute bottom-0 left-0 right-0 z-40 border-t border-white/70 bg-white/85 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-xl"><div className="grid grid-cols-4">{NAV_ITEMS.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setActiveTab(id)} className="pressable flex flex-col items-center gap-1.5 px-1 py-1.5"><span className={`grid h-9 w-11 place-items-center rounded-xl transition ${activeTab === id ? "bg-slate-950 text-white shadow-lg" : "text-slate-400"}`}><Icon className={`h-[18px] w-[18px] ${id === "create" && activeTab !== id ? "text-fuchsia-500" : ""}`} /></span><span className={`text-[10px] font-bold ${activeTab === id ? "text-slate-950" : "text-slate-400"}`}>{label}</span></button>)}</div></nav>}{activeEvent && <EventDetail event={activeEvent} onClose={() => setActiveEvent(null)} />}</div></main>;
+  return <main className="min-h-screen bg-[#17152a] p-0 font-sans text-slate-900 sm:p-5"><div className="phone-shell relative mx-auto min-h-screen max-w-md overflow-hidden bg-[#f7f5ff] sm:min-h-[calc(100vh-40px)] sm:rounded-[34px] sm:shadow-[0_30px_100px_rgba(1,3,30,0.55)]"><div className="ambient-glow ambient-one" /><div className="ambient-glow ambient-two" /> <div className="relative min-h-screen">{content}</div>{!showPrd && !showMyEvents && <nav className="absolute bottom-0 left-0 right-0 z-40 border-t border-white/70 bg-white/85 px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-xl"><div className="grid grid-cols-4">{NAV_ITEMS.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setActiveTab(id)} className="pressable flex flex-col items-center gap-1.5 px-1 py-1.5"><span className={`grid h-9 w-11 place-items-center rounded-xl transition ${activeTab === id ? "bg-slate-950 text-white shadow-lg" : "text-slate-400"}`}><Icon className={`h-[18px] w-[18px] ${id === "create" && activeTab !== id ? "text-fuchsia-500" : ""}`} /></span><span className={`text-[10px] font-bold ${activeTab === id ? "text-slate-950" : "text-slate-400"}`}>{label}</span></button>)}</div></nav>}{activeEvent && <><EventDetail event={activeEvent} onClose={() => setActiveEvent(null)} /><EventShareFab event={activeEvent} /></>}</div></main>;
 }

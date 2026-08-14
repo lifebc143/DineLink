@@ -260,4 +260,28 @@ describe("發起飯局表單", () => {
     fireEvent.click(screen.getByText("我的飯局"));
     expect(await screen.findByText("寫入後可見飯局")).not.toBeNull();
   });
+
+  it("飯局詳情提供公開分享連結與官方 Threads Post Intent", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ events: [] }) }));
+    render(<Home />);
+    fireEvent.click(screen.getAllByText("我要報名")[0]);
+    fireEvent.click(screen.getByLabelText("分享飯局"));
+
+    expect(screen.getByRole("region", { name: "分享飯局" }).textContent).toContain("不會公開申請或成員資料");
+    const threadsLink = screen.getByText("分享到 Threads").closest("a");
+    expect(threadsLink).not.toBeNull();
+    const intent = new URL(threadsLink?.getAttribute("href") || "");
+    expect(intent.origin).toBe("https://www.threads.com");
+    expect(intent.pathname).toBe("/intent/post");
+    expect(intent.searchParams.get("text")).toContain("週五夜的微醺義式晚餐");
+    expect(intent.searchParams.get("url")).toContain("?event=1");
+  });
+
+  it("公開 event 深度連結會自動展開對應飯局詳情", async () => {
+    window.history.replaceState({}, "", "/?event=2");
+    render(<Home />);
+    expect((await screen.findAllByText("日式燒肉，同桌認識新朋友")).length).toBeGreaterThan(1);
+    expect(screen.getByLabelText("分享飯局")).not.toBeNull();
+    window.history.replaceState({}, "", "/");
+  });
 });
