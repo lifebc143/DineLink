@@ -25,13 +25,13 @@ export const userRoleEnum = pgEnum("user_role", ["member", "moderator", "admin"]
 export const accountStatusEnum = pgEnum("account_status", ["active", "suspended", "deactivated"]);
 export const genderEnum = pgEnum("gender", ["woman", "man", "non_binary", "prefer_not_to_say"]);
 export const verificationStatusEnum = pgEnum("verification_status", ["unverified", "pending", "verified", "rejected"]);
-export const eventStatusEnum = pgEnum("event_status", ["draft", "published", "full", "locked", "in_progress", "completed", "cancelled"]);
+export const eventStatusEnum = pgEnum("event_status", ["draft", "published", "full", "locked", "in_progress", "completed", "cancelled", "unmatched"]);
 export const paymentModeEnum = pgEnum("payment_mode", ["host_treats", "split_bill", "men_treat_women"]);
 export const applicationStatusEnum = pgEnum("application_status", ["pending", "approved", "rejected", "withdrawn", "cancelled"]);
 export const attendanceStatusEnum = pgEnum("attendance_status", ["confirmed", "attended", "late", "no_show", "excused"]);
 export const depositStatusEnum = pgEnum("deposit_status", ["held", "released", "forfeited", "refunded"]);
 export const pointTransactionTypeEnum = pgEnum("point_transaction_type", ["top_up", "deposit_hold", "deposit_release", "deposit_forfeit", "reward", "adjustment"]);
-export const notificationTypeEnum = pgEnum("notification_type", ["application_submitted", "application_approved", "application_rejected", "application_cancelled", "attendance_updated", "event_reminder", "event_cancelled", "member_no_show", "new_message", "review_request", "safety_alert"]);
+export const notificationTypeEnum = pgEnum("notification_type", ["application_submitted", "application_approved", "application_rejected", "application_cancelled", "attendance_updated", "event_reminder", "event_cancelled", "event_unmatched", "member_no_show", "new_message", "review_request", "safety_alert"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "succeeded", "failed", "refunded", "cancelled"]);
 export const paymentPurposeEnum = pgEnum("payment_purpose", ["point_top_up", "membership", "restaurant_campaign"]);
 
@@ -90,6 +90,7 @@ export const diningEvents = pgTable("dining_events", {
   reminderTaskUid: varchar("reminder_task_uid", { length: 65 }),
   reminderScheduledFor: timestamp("reminder_scheduled_for", { withTimezone: true }),
   cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  unmatchedAt: timestamp("unmatched_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -99,6 +100,15 @@ export const diningEvents = pgTable("dining_events", {
   index("dining_events_geo_idx").on(table.latitude, table.longitude),
   uniqueIndex("dining_events_reminder_task_unique").on(table.reminderTaskUid),
 ]);
+
+/** Project-level recurring jobs. Callback handlers trust only task UIDs persisted here. */
+export const automationJobs = pgTable("automation_jobs", {
+  jobKey: varchar("job_key", { length: 80 }).primaryKey(),
+  cronTaskUid: varchar("cron_task_uid", { length: 65 }).notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("automation_jobs_task_uid_unique").on(table.cronTaskUid)]);
 
 export const eventApplications = pgTable("event_applications", {
   id: uuid("id").defaultRandom().primaryKey(),

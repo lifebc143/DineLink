@@ -97,4 +97,15 @@ describe("MyEventsManagement 進階飯局管理", () => {
     fireEvent.click(screen.getByText("儲存飯局內容"));
     expect(fetchMock).toHaveBeenCalledWith("/api/events/edit-event", expect.objectContaining({ method: "PUT", body: expect.stringContaining("更新後飯局") }));
   });
+
+  it("逾時未成局飯局會移至歷史分類，不再混入可管理飯局", async () => {
+    const unmatched = { id: "unmatched-event", title: "未成局午餐", eventStartAt: "2026-08-01T04:00:00.000Z", restaurantName: "測試店", venueAddress: "台北市中山區", status: "unmatched", capacity: 4 };
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/me/events" ? { hosted: [{ event: unmatched, pendingApplications: [], attendances: [] }], applied: [] } : url === "/api/notifications" ? { notifications: [] } : { tasks: [] } })));
+    render(<MyEventsManagement onBack={() => undefined} />);
+    expect(await screen.findByText("尚未發起飯局")).not.toBeNull();
+    fireEvent.click(screen.getByText("未成局歷史"));
+    expect(await screen.findByText("未成局午餐")).not.toBeNull();
+    expect(screen.getByText("此飯局在開始前未有已確認成員，系統已自動停止報名並標示為未成局，不影響任何人的信用與出席紀錄。")).not.toBeNull();
+    expect(screen.queryByText("編輯內容")).toBeNull();
+  });
 });
