@@ -2,6 +2,7 @@ import React from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Home from "./page";
+import { formatTaipeiTime } from "@/lib/time";
 
 vi.mock("@/components/Map", () => ({
   MapView: ({ initialCenter }: { initialCenter: { lat: number; lng: number } }) => (
@@ -70,6 +71,7 @@ describe("發起飯局表單", () => {
     fireEvent.click(screen.getByText("發起飯局"));
     fireEvent.change(screen.getByPlaceholderText("例如：下班後想聊聊旅行的義式晚餐"), { target: { value: "週末義式晚餐" } });
     fireEvent.change(screen.getByLabelText("選擇日期"), { target: { value: "2026-08-20" } });
+    fireEvent.change(screen.getByLabelText("選擇時間"), { target: { value: "14:00" } });
     fireEvent.change(screen.getByPlaceholderText("搜尋餐廳、地標或地址"), { target: { value: "PASTA & CO." } });
     fireEvent.click(screen.getByText("預覽並發起飯局"));
 
@@ -81,6 +83,8 @@ describe("發起飯局表單", () => {
     expect(status.textContent).toContain("現在已顯示在探索清單中");
     expect(screen.queryByText("週末義式晚餐")).not.toBeNull();
     expect(fetchMock).toHaveBeenCalledWith("/api/events", expect.objectContaining({ method: "POST" }));
+    const createCall = fetchMock.mock.calls.find((call) => call[0] === "/api/events" && call[1]?.method === "POST");
+    expect(JSON.parse(String(createCall?.[1]?.body)).eventStartAt).toBe("2026-08-20T06:00:00.000Z");
   });
 
   it("API 回傳未登入時會在預覽彈窗顯示登入提示", async () => {
@@ -237,6 +241,10 @@ describe("發起飯局表單", () => {
     fireEvent.click(screen.getByText("預覽並發起飯局"));
     expect(screen.getByRole("dialog", { name: "飯局預覽建立確認" }).className).toContain("h-[100dvh]");
     expect(getActiveConfirmButton()).not.toBeNull();
+  });
+
+  it("公開飯局的 UTC 時間會固定以台灣時區顯示", () => {
+    expect(formatTaipeiTime("2026-08-20T06:00:00.000Z")).toBe("14:00");
   });
 
   it("探索、飯局詳情與分享文案都會同時呈現店名及完整地址", async () => {

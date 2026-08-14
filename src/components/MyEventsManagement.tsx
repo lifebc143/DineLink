@@ -12,7 +12,7 @@ type Notification = { id: string; title: string; body: string; type: string; eve
 type ReviewTask = { event: EventRecord; peer: { id: string; displayName: string; avatarUrl: string | null } };
 type View = "list" | "calendar" | "notifications" | "reviews";
 
-const dateText = (value: string) => new Date(value).toLocaleString("zh-TW", { month: "numeric", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" });
+const dateText = (value: string) => new Date(value).toLocaleString("zh-TW", { timeZone: "Asia/Taipei", month: "numeric", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" });
 
 export default function MyEventsManagement({ onBack }: { onBack: () => void }) {
   const [data, setData] = useState<Payload | null>(null);
