@@ -562,7 +562,7 @@ function EventShareActions({ event }: { event: DiningEvent }) {
 
 function EventShareFab({ event }: { event: DiningEvent }) {
   const [open, setOpen] = useState(false);
-  return <div className="fixed right-4 z-[70]" style={{ bottom: "max(1.25rem, env(safe-area-inset-bottom))" }}><button onClick={() => setOpen((value) => !value)} aria-label="分享飯局" className="pressable grid h-12 w-12 place-items-center rounded-full bg-sky-600 text-white shadow-[0_12px_28px_rgba(2,132,199,0.42)]"><Share2 className="h-5 w-5" /></button>{open && <div className="absolute bottom-14 right-0 w-[min(340px,calc(100vw-2rem))] rounded-[24px] bg-white p-1 shadow-[0_18px_45px_rgba(15,23,42,0.22)]"><EventShareActions event={event} /></div>}</div>;
+  return <div className="fixed right-4 z-[70]" style={{ bottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 5rem))" }}><button onClick={() => setOpen((value) => !value)} aria-label="分享飯局" className="pressable grid h-12 w-12 place-items-center rounded-full bg-sky-600 text-white shadow-[0_12px_28px_rgba(2,132,199,0.42)]"><Share2 className="h-5 w-5" /></button>{open && <div className="absolute bottom-14 right-0 w-[min(340px,calc(100vw-2rem))] rounded-[24px] bg-white p-1 shadow-[0_18px_45px_rgba(15,23,42,0.22)]"><EventShareActions event={event} /></div>}</div>;
 }
 
 function EventDetail({ event, onClose }: { event: DiningEvent; onClose: () => void }) {
