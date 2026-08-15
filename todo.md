@@ -232,6 +232,6 @@
 - [x] 建立動態 sitemap.xml 與 robots.txt，納入公開飯局並排除管理、帳號與受保護 API 路徑。
 - [x] 改善主標題階層、語意化 landmarks、圖片 alt 與圖片載入策略，補齊 SEO／可存取性回歸測試。
 - [x] 執行 Lighthouse／搜尋索引檢測、型別檢查與 production build，依結果調整後自動發布。
-- [ ] 提交本次 SEO 與可存取性優化程式碼，保留現有完整 Commit 歷史。
-- [ ] 推送 SEO 最佳化提交至 GitHub `lifebc143/DineLink` 的 `main` 分支。
-- [ ] 驗證 GitHub 遠端 main 與本地提交一致，並回報同步結果。
+- [x] 提交本次 SEO 與可存取性優化程式碼，保留現有完整 Commit 歷史。
+- [x] 推送 SEO 最佳化提交至 GitHub `lifebc143/DineLink` 的 `main` 分支。
+- [x] 驗證 GitHub 遠端 main 與本地提交一致，並回報同步結果。
