@@ -226,3 +226,12 @@
 - [x] 調整 Threads 專用飯局分享文案，將完整店名與地址移至前段優先呈現。
 - [x] 精簡 Threads 分享中的可省略資訊，保留完整地址、飯局時間與安全飯局連結。
 - [x] 補齊 Threads 分享文案完整地址與連結回歸測試並自動發布。
+- [x] 盤點公開飯局頁、網站 Metadata、語意化結構與現有索引／分享基礎設施，定義可安全爬取的公開範圍。
+- [x] 補齊首頁與公開飯局詳情的 title、description、canonical、Open Graph 與 Twitter Card Metadata。
+- [x] 為公開飯局加入 Schema.org Event JSON-LD，提供名稱、時間、餐廳、地址、主辦人與公開 URL。
+- [x] 建立動態 sitemap.xml 與 robots.txt，納入公開飯局並排除管理、帳號與受保護 API 路徑。
+- [x] 改善主標題階層、語意化 landmarks、圖片 alt 與圖片載入策略，補齊 SEO／可存取性回歸測試。
+- [x] 執行 Lighthouse／搜尋索引檢測、型別檢查與 production build，依結果調整後自動發布。
+- [ ] 提交本次 SEO 與可存取性優化程式碼，保留現有完整 Commit 歷史。
+- [ ] 推送 SEO 最佳化提交至 GitHub `lifebc143/DineLink` 的 `main` 分支。
+- [ ] 驗證 GitHub 遠端 main 與本地提交一致，並回報同步結果。

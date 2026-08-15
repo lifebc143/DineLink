@@ -337,7 +337,7 @@ describe("發起飯局表單", () => {
     expect(intent.origin).toBe("https://www.threads.com");
     expect(intent.pathname).toBe("/intent/post");
     expect(intent.searchParams.get("text")).toContain("週五夜的微醺義式晚餐");
-    expect(intent.searchParams.get("url")).toContain("?event=1");
+    expect(intent.searchParams.get("url")).toContain("/events/1");
   });
 
   it("飯局詳情只有在 POST 報名 API 回傳 201 後才顯示申請成功", async () => {
