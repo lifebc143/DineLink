@@ -206,6 +206,6 @@
 - [x] 將聊天室右上角鈴鐺啟用為通知中心入口，點擊後可開啟通知清單。
 - [x] 由真實通知 API 顯示聊天室鈴鐺的未讀數量，無未讀時不顯示提示點或數字。
 - [x] 確保通知中心的飯局通知仍可深度導覽至正確飯局或我的飯局管理頁，並補齊回歸測試後自動發布。
-- [ ] 檢查 Git 儲存庫狀態、`.gitignore` 與已追蹤檔案，確認不會推送 `.env`、node_modules 或敏感設定。
-- [ ] 在保留目前 Commit 歷史的前提下，將完整 DineLink 程式碼推送至 GitHub `lifebc143/DineLink` 的 `main` 分支。
-- [ ] 驗證遠端 main 分支與本地提交一致，並回報 GitHub 推送結果。
+- [x] 檢查 Git 儲存庫狀態、`.gitignore` 與已追蹤檔案，確認不會推送 `.env`、node_modules 或敏感設定。
+- [x] 在保留目前 Commit 歷史的前提下，將完整 DineLink 程式碼推送至 GitHub `lifebc143/DineLink` 的 `main` 分支。
+- [x] 驗證遠端 main 分支與本地提交一致，並回報 GitHub 推送結果。
