@@ -26,7 +26,7 @@ describe("BackupManagementPanel", () => {
     vi.stubGlobal("prompt", vi.fn(() => "需要回復誤刪除的設定資料"));
     render(<BackupManagementPanel />);
     expect(await screen.findByText("2026-08-manual 應用資料快照")).not.toBeNull();
-    fireEvent.click(screen.getByText("立即快照"));
+    fireEvent.click(screen.getByText("立即執行手動備份"));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/admin/backups/run", expect.objectContaining({ method: "POST", body: expect.stringContaining("CREATE_SNAPSHOT") })));
     fireEvent.click(screen.getByText("申請手動還原"));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/admin/backups/snapshot-1/restore-request", expect.objectContaining({ method: "POST", body: expect.stringContaining("REQUEST_RESTORE") })));

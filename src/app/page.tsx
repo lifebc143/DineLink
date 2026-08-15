@@ -204,7 +204,7 @@ function ExplorePage({ events, notice, onOpen, userName, onAccountClick }: { eve
   const filters = ["全部", "今晚", "週末", "近距離"];
 
   return (
-    <section className="page-enter px-4 pb-28 pt-5">
+    <section className="page-enter app-top-safe px-4 pb-28">
       <header className="relative overflow-hidden rounded-[30px] bg-slate-950 px-5 pb-6 pt-5 text-white shadow-[0_20px_45px_rgba(27,12,62,0.28)]">
         <div className="mesh-orb mesh-orb-one" />
         <div className="mesh-orb mesh-orb-two" />

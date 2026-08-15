@@ -205,5 +205,8 @@
 @keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .page-enter { animation: none; } .pressable, .card-lift { transition: none; } }
 
+/* 首頁頂部控制項需避開 iOS／Android 的系統狀態欄與瀏海安全區。 */
+.app-top-safe { padding-top: max(1.25rem, calc(env(safe-area-inset-top) + 0.75rem)); }
+
 /* 發起飯局預覽必須覆蓋固定底部導覽，並在所有行動瀏覽器保留確認操作列。 */
 div:has(> section[aria-label="飯局預覽確認"]) { display: none !important; }
