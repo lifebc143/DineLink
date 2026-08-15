@@ -296,7 +296,9 @@ describe("發起飯局表單", () => {
     expect(screen.getByText("地址：台北市信義區松壽路 20 號 2 樓")).not.toBeNull();
     fireEvent.click(screen.getByLabelText("分享飯局"));
     const intent = new URL(screen.getByText("分享到 Threads").closest("a")?.getAttribute("href") || "");
-    expect(intent.searchParams.get("text")).toContain("地址：台北市信義區松壽路 20 號 2 樓");
+    const threadsText = intent.searchParams.get("text") || "";
+    expect(threadsText).toContain("完整地址：台北市信義區松壽路 20 號 2 樓");
+    expect(threadsText.indexOf("完整地址：")).toBeLessThan(threadsText.indexOf("店名地址飯局"));
   });
 
   it("建立成功後，我的飯局會從受保護查詢結果顯示新建立資料", async () => {
