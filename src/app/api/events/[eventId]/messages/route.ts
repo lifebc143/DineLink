@@ -21,7 +21,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ eventI
   if (!user) return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
   const { eventId } = await params;
   if (!await canAccessChat(eventId, user.id)) return NextResponse.json({ error: "CHAT_ACCESS_DENIED" }, { status: 403 });
-  const messages = await db.select({ message: chatMessages, author: { id: users.id, displayName: users.displayName } }).from(chatMessages).innerJoin(users, eq(chatMessages.authorId, users.id)).where(eq(chatMessages.eventId, eventId)).orderBy(asc(chatMessages.createdAt));
+  const messages = await db.select({ message: chatMessages, author: { id: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl } }).from(chatMessages).innerJoin(users, eq(chatMessages.authorId, users.id)).where(eq(chatMessages.eventId, eventId)).orderBy(asc(chatMessages.createdAt));
   return NextResponse.json({ messages });
 }
 

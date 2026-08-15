@@ -13,7 +13,7 @@ function uniqueKey(relKey: string) {
   return dot < 0 ? `${key}_${suffix}` : `${key.slice(0, dot)}_${suffix}${key.slice(dot)}`;
 }
 
-export async function storagePut(relKey: string, data: string, contentType = "application/json") {
+export async function storagePut(relKey: string, data: string | Uint8Array | ArrayBuffer, contentType = "application/json") {
   const { forgeUrl, forgeKey } = getStorageConfig();
   const key = uniqueKey(relKey);
   const endpoint = new URL("v1/storage/presign/put", `${forgeUrl}/`);
@@ -22,7 +22,7 @@ export async function storagePut(relKey: string, data: string, contentType = "ap
   if (!presign.ok) throw new Error(`Storage presign failed (${presign.status})`);
   const { url } = await presign.json() as { url?: string };
   if (!url) throw new Error("Storage returned an empty upload URL");
-  const uploaded = await fetch(url, { method: "PUT", headers: { "Content-Type": contentType }, body: data });
+  const uploaded = await fetch(url, { method: "PUT", headers: { "Content-Type": contentType }, body: data as unknown as BodyInit });
   if (!uploaded.ok) throw new Error(`Storage upload failed (${uploaded.status})`);
   return { key, url: `/manus-storage/${key}` };
 }
