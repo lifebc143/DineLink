@@ -146,27 +146,24 @@ describe("DineLink transaction Route Handlers", () => {
     expect(await response.json()).toMatchObject({ error: "REVIEW_ATTENDANCE_REQUIRED" });
   });
 
-  it("returns a rejected application deposit and writes its notifications", async () => {
+  it("rejects a pending application and writes a rejection notification without requiring a legacy deposit", async () => {
     const fixture = transactionWith([
       [{ id: "application-id", eventId: "event-id", applicantId: applicant.id, status: "pending" }],
       [{ id: "event-id", hostId: host.id, capacity: 4 }],
-      [{ id: "deposit-id", points: 100 }],
-      [applicant],
     ]);
     state.transaction = async (callback) => callback(fixture.tx);
     const request = new Request("http://localhost/api/applications/application-id/review", { method: "POST", body: JSON.stringify({ decision: "rejected" }) });
     const response = await reviewApplication(request as never, { params: Promise.resolve({ applicationId: "application-id" }) });
     expect(await response.json()).toMatchObject({ status: "rejected" });
-    expect(fixture.inserts).toHaveLength(2);
-    expect(fixture.inserts[1]).toMatchObject({ recipientId: applicant.id, type: "application_rejected" });
-    expect(fixture.updates).toEqual(expect.arrayContaining([expect.objectContaining({ status: "released" }), expect.objectContaining({ pointBalance: 600 })]));
+    expect(fixture.inserts).toHaveLength(1);
+    expect(fixture.inserts[0]).toMatchObject({ recipientId: applicant.id, type: "application_rejected" });
+    expect(fixture.updates).toEqual(expect.arrayContaining([expect.objectContaining({ status: "rejected" })]));
   });
 
   it("approves applications while capacity exists and marks full capacity conflicts", async () => {
     const approvedFixture = transactionWith([
       [{ id: "application-id", eventId: "event-id", applicantId: applicant.id, status: "pending" }],
       [{ id: "event-id", hostId: host.id, capacity: 4 }],
-      [{ id: "deposit-id", points: 100 }],
       [{ total: 1 }],
     ]);
     state.transaction = async (callback) => callback(approvedFixture.tx);
@@ -178,7 +175,6 @@ describe("DineLink transaction Route Handlers", () => {
     const fullFixture = transactionWith([
       [{ id: "application-id", eventId: "event-id", applicantId: applicant.id, status: "pending" }],
       [{ id: "event-id", hostId: host.id, capacity: 4 }],
-      [{ id: "deposit-id", points: 100 }],
       [{ total: 4 }],
     ]);
     state.transaction = async (callback) => callback(fullFixture.tx);
