@@ -36,13 +36,13 @@ describe("會員頭像編輯器", () => {
     expect(screen.getByText("頭像更新成功！")).not.toBeNull();
   });
 
-  it("在手機全螢幕裁切頁中保留使用安全區間距的固定確認操作列", async () => {
+  it("在手機全螢幕裁切頁中將確認操作列放在縮放控制正下方", async () => {
     render(<ProfileAvatarEditor user={{ displayName: "小安" }} onUpdated={() => undefined} />);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File(["png"], "avatar.png", { type: "image/png" })] } });
     expect(await screen.findByRole("dialog")).not.toBeNull();
     expect(screen.getByTestId("avatar-editor-fullscreen").className).toContain("min-h-[100dvh]");
-    expect(screen.getByTestId("avatar-editor-actions").className).toContain("pb-[max(1.25rem,env(safe-area-inset-bottom))]");
+    expect(screen.getByTestId("avatar-editor-actions").className).toContain("mt-5");
     expect(screen.getByText("套用頭像")).not.toBeNull();
   });
 });
