@@ -244,3 +244,8 @@
 - [x] 建立真實公開飯局的城市與主題探索入口、Metadata、canonical 與 sitemap 索引規則。
 - [x] 補齊專屬 OG、活動狀態與城市／主題探索頁的 SEO／可存取性回歸測試。
 - [x] 執行 production build 與自動發布，提供 Google Search Console／PageSpeed Insights 的正式設定指引。
+- [x] 檢查最新 SEO 與可存取性程式碼的 Git 工作目錄、提交歷史及 GitHub main 同步狀態。
+- [x] 提交並推送最新 SEO／可存取性程式碼至 GitHub `lifebc143/DineLink` 的 `main` 分支，保留完整歷史。
+- [x] 驗證會員頭像選圖、圓形裁切、JPG／PNG／WebP 及 5MB 驗證、S3 寫入與 users.avatar_url 更新。
+- [x] 驗證頭像更新後同步至頂部帳號入口、個人主頁、飯局卡片、成員清單與聊天室。
+- [x] 補跑會員頭像與 SEO 全套回歸測試、正式建置並自動發布。
