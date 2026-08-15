@@ -239,6 +239,27 @@ describe("發起飯局表單", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/events/chat-event/messages", expect.objectContaining({ method: "POST", body: JSON.stringify({ content: "收到，餐廳見！" }) }));
   });
 
+  it("聊天室鈴鐺會顯示真實未讀數量並開啟通知中心", async () => {
+    window.history.replaceState({}, "", "/?tab=messages&eventId=chat-event&eventTitle=%E6%B8%AC%E8%A9%A6%E9%A3%AF%E5%B1%80&member=%E5%B0%8F%E5%AE%89");
+    const notification = { id: "notice-1", title: "飯局聊天室有新訊息", body: "小安傳送了一則新訊息。", type: "new_message", eventId: "chat-event", readAt: null, createdAt: "2026-08-20T10:30:00.000Z" };
+    vi.stubGlobal("fetch", vi.fn((url: string) => {
+      if (url === "/api/auth/session") return Promise.resolve({ ok: true, status: 200, json: async () => ({ user: { id: "current-user", displayName: "主辦人" } }) });
+      if (url === "/api/events") return Promise.resolve({ ok: true, status: 200, json: async () => ({ events: [] }) });
+      if (url === "/api/events/chat-event/messages") return Promise.resolve({ ok: true, status: 200, json: async () => ({ messages: [] }) });
+      if (url === "/api/notifications?unread=true") return Promise.resolve({ ok: true, status: 200, json: async () => ({ notifications: [notification] }) });
+      if (url === "/api/me/events") return Promise.resolve({ ok: true, status: 200, json: async () => ({ hosted: [], applied: [] }) });
+      if (url === "/api/notifications") return Promise.resolve({ ok: true, status: 200, json: async () => ({ notifications: [notification] }) });
+      if (url === "/api/me/review-tasks") return Promise.resolve({ ok: true, status: 200, json: async () => ({ tasks: [] }) });
+      return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+    }));
+    render(<Home />);
+
+    const bell = await screen.findByRole("button", { name: "開啟通知中心，目前有 1 則未讀通知" });
+    fireEvent.click(bell);
+    expect(await screen.findByText("我的飯局")).not.toBeNull();
+    expect(await screen.findByText("飯局聊天室有新訊息")).not.toBeNull();
+  });
+
   it("個人頁會顯示信用 Rating 趨勢與歷史出席率洞察", async () => {
     vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/me/insights" ? { creditScore: 88, completedEventCount: 4, attendanceRate: 75, attendanceTotal: 4, trend: [{ label: "8/1", score: 86 }, { label: "8/8", score: 88 }], dimensions: { punctuality: 4.5, politeness: 4.8, interaction: 4.2 } } : {} })));
     render(<Home />);

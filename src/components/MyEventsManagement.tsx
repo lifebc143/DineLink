@@ -16,9 +16,9 @@ const dateText = (value: string) => new Date(value).toLocaleString("zh-TW", { ti
 
 type ChatTarget = { eventId: string; eventTitle: string; memberName: string };
 
-export default function MyEventsManagement({ onBack, onOpenChat }: { onBack: () => void; onOpenChat?: (target: ChatTarget) => void }) {
+export default function MyEventsManagement({ onBack, onOpenChat, initialView = "list" }: { onBack: () => void; onOpenChat?: (target: ChatTarget) => void; initialView?: View }) {
   const [data, setData] = useState<Payload | null>(null);
-  const [view, setView] = useState<View>("list");
+  const [view, setView] = useState<View>(initialView);
   const [list, setList] = useState<"hosted" | "applied" | "history">("hosted");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,7 @@ export default function MyEventsManagement({ onBack, onOpenChat }: { onBack: () 
   const [reviewTarget, setReviewTarget] = useState<ReviewTask | null>(null);
   const [editTarget, setEditTarget] = useState<EventRecord | null>(null);
   const [noShowTarget, setNoShowTarget] = useState<{ eventId: string; eventTitle: string; eventStartAt: string; userId: string; memberName: string; lastContact?: { content: string; createdAt: string } | null } | null>(null);
-  const [focusEventId] = useState(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("eventId"));
+  const [focusEventId, setFocusEventId] = useState(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("eventId"));
 
   const load = async () => {
     setLoading(true);
@@ -100,7 +100,7 @@ export default function MyEventsManagement({ onBack, onOpenChat }: { onBack: () 
     {message && <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900">{message}{message.startsWith("請先登入") && <a href="/api/auth/login" className="mt-3 inline-block rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white">登入並查看我的飯局</a>}</div>}
     {!loading && !message && view === "list" && <ManageView active={list} setActive={setList} data={data} focusEventId={focusEventId} review={reviewApplication} updateAttendance={requestAttendanceUpdate} cancel={cancel} onEdit={setEditTarget} onOpenChat={onOpenChat} />}
     {!loading && !message && view === "calendar" && <CalendarView items={allEvents} />}
-    {!loading && !message && view === "notifications" && <NotificationView items={notifications} markRead={markRead} />}
+    {!loading && !message && view === "notifications" && <NotificationView items={notifications} markRead={markRead} onOpenEvent={(eventId) => { setFocusEventId(eventId); setView("list"); }} />}
     {!loading && !message && view === "reviews" && <ReviewView tasks={reviewTasks} onOpen={setReviewTarget} />}
     {reviewTarget && <ReviewDialog task={reviewTarget} scores={scores} setScores={setScores} attendanceNote={attendanceNote} setAttendanceNote={setAttendanceNote} onClose={() => setReviewTarget(null)} onSubmit={submitReview} />}
     {editTarget && <EditEventDialog event={editTarget} onClose={() => setEditTarget(null)} onSave={saveEvent} />}
@@ -135,8 +135,8 @@ function CalendarView({ items }: { items: Array<{ event: EventRecord; role: "主
   return <div className="mt-4 rounded-[24px] bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="pressable rounded-lg bg-slate-100 px-3 py-1 text-sm font-bold">‹</button><p className="text-sm font-black">{cursor.toLocaleString("zh-TW", { year: "numeric", month: "long" })}</p><button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="pressable rounded-lg bg-slate-100 px-3 py-1 text-sm font-bold">›</button></div><div className="mt-3 flex gap-2">{(["全部", "主辦", "參與"] as const).map((item) => <button key={item} onClick={() => setScope(item)} className={`pressable rounded-full px-3 py-1.5 text-xs font-bold ${scope === item ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"}`}>{item}</button>)}</div><p className="mt-3 text-[10px] leading-relaxed text-slate-400">「提醒標記」會儲存在這台裝置，並在本頁呈現；飯局前推播通知由系統既有通知流程處理。</p><div className="mt-4 space-y-2">{monthItems.map(({ event, role }) => { const start = new Date(event.eventStartAt); const isSoon = start.getTime() - Date.now() > 0 && start.getTime() - Date.now() < 48 * 60 * 60 * 1000; const active = reminders.has(event.id); return <div key={event.id} className="rounded-2xl border border-slate-100 p-3"><div className="flex gap-2"><CalendarDays className="mt-0.5 h-4 w-4 text-emerald-600" /><div className="min-w-0 flex-1"><p className="text-xs font-black text-slate-800">{event.title}</p><p className="mt-1 text-[11px] text-slate-500">{dateText(event.eventStartAt)} · {role}</p>{isSoon && <p className="mt-1 text-[10px] font-bold text-orange-600">即將開始</p>}</div></div><button onClick={() => setReminders((current) => { const next = new Set(current); active ? next.delete(event.id) : next.add(event.id); return next; })} className={`pressable mt-2 w-full rounded-xl py-2 text-[11px] font-bold ${active ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-700"}`}>{active ? "已標記提醒（本裝置）" : "標記提醒（本裝置）"}</button></div>; })}{monthItems.length === 0 && <Empty title="本月沒有符合篩選的飯局" text="切換月份或分類，即可查看其他飯局行程。" />}</div></div>;
 }
 
-function NotificationView({ items, markRead }: { items: Notification[]; markRead: (id: string) => void }) {
-  const open = (item: Notification) => { if (!item.readAt) void markRead(item.id); if (item.eventId) { window.history.pushState({}, "", `/?tab=my-events&eventId=${encodeURIComponent(item.eventId)}`); window.dispatchEvent(new Event("dine-link:navigate")); } };
+function NotificationView({ items, markRead, onOpenEvent }: { items: Notification[]; markRead: (id: string) => void; onOpenEvent: (eventId: string) => void }) {
+  const open = (item: Notification) => { if (!item.readAt) void markRead(item.id); if (item.eventId) { window.history.pushState({}, "", `/?tab=my-events&eventId=${encodeURIComponent(item.eventId)}`); onOpenEvent(item.eventId); window.dispatchEvent(new Event("dine-link:navigate")); } };
   return <div className="mt-4 space-y-3">{items.length === 0 && <Empty title="目前沒有通知" text="新的申請、審核結果與成員變動會顯示在這裡。" />}{items.map((item) => <button key={item.id} onClick={() => open(item)} className={`pressable w-full rounded-[20px] p-4 text-left shadow-sm ${item.readAt ? "bg-white" : "border border-emerald-100 bg-emerald-50"}`}><div className="flex gap-3"><Bell className={`h-5 w-5 ${item.readAt ? "text-slate-400" : "text-emerald-600"}`} /><div><p className="text-sm font-black text-slate-900">{item.title}</p><p className="mt-1 text-xs leading-relaxed text-slate-600">{item.body}</p><p className="mt-2 text-[10px] text-slate-400">{new Date(item.createdAt).toLocaleString("zh-TW")}{item.eventId ? " · 點擊前往對應飯局" : !item.readAt ? " · 點選標示已讀" : ""}</p></div></div></button>)}</div>;
 }
 
