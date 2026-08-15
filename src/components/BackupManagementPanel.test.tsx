@@ -31,4 +31,14 @@ describe("BackupManagementPanel", () => {
     fireEvent.click(screen.getByText("申請手動還原"));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/admin/backups/snapshot-1/restore-request", expect.objectContaining({ method: "POST", body: expect.stringContaining("REQUEST_RESTORE") })));
   });
+
+  it("僅在管理員面板呈現私有 S3 識別碼，下載仍使用受保護 API 路徑", async () => {
+    const snapshot = { id: "snapshot-private", scheduleKey: "2026-08", status: "succeeded", trigger: "scheduled", checksumSha256: "abc123", byteSize: 2048, tableCounts: { users: 2 }, createdAt: "2026-08-01T00:00:00.000Z", completedAt: "2026-08-01T00:00:01.000Z", storage: { provider: "Private S3", objectKey: "backups/dinelink/2026-08/application-data.json", downloadAvailable: true } };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ settings: { dayOfMonth: 1, hourTaipei: 3, retentionCount: 3, enabled: true }, snapshots: [snapshot], restoreRequests: [], coverage: { included: [], excluded: [], timezone: "Asia/Taipei" } }) }));
+    render(<BackupManagementPanel />);
+    expect(await screen.findByText(/backups\/dinelink\/2026-08\/application-data.json/)).not.toBeNull();
+    const download = screen.getByText("下載").closest("a");
+    expect(download?.getAttribute("href")).toBe("/api/admin/backups/snapshot-private/download");
+    expect(download?.getAttribute("href")).not.toMatch(/^https?:\/\//);
+  });
 });

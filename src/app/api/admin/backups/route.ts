@@ -14,7 +14,7 @@ export async function GET() {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   const [settings, snapshots, restoreRequests] = await Promise.all([getBackupSettings(), listBackupSnapshots(), db.select().from(backupRestoreRequests).orderBy(desc(backupRestoreRequests.createdAt)).limit(8)]);
-  return NextResponse.json({ settings, snapshots: snapshots.map(({ storageKey: _storageKey, ...snapshot }) => snapshot), restoreRequests, coverage: { included: ["會員、飯局、申請、出席、聊天室、評價、通知、點數與付款紀錄"], excluded: ["網站程式碼、Secrets、網域與平台整合；請使用官方完整網站備份"], timezone: "Asia/Taipei" } });
+  return NextResponse.json({ settings, snapshots: snapshots.map(({ storageKey, ...snapshot }) => ({ ...snapshot, storage: storageKey ? { provider: "Private S3", objectKey: storageKey, downloadAvailable: true } : { provider: "Private S3", objectKey: null, downloadAvailable: false } })), restoreRequests, coverage: { included: ["會員、飯局、申請、出席、聊天室、評價、通知、點數與付款紀錄"], excluded: ["網站程式碼、Secrets、網域與平台整合；請使用官方完整網站備份"], timezone: "Asia/Taipei" } });
 }
 
 export async function PUT(request: Request) {
