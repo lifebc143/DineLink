@@ -108,4 +108,35 @@ describe("MyEventsManagement 進階飯局管理", () => {
     expect(screen.getByText("此飯局在開始前未有已確認成員，系統已自動停止報名並標示為未成局，不影響任何人的信用與出席紀錄。")).not.toBeNull();
     expect(screen.queryByText("編輯內容")).toBeNull();
   });
+
+  it("出席狀態會高亮目前紀錄，爽約需二次確認，並可從成員卡片開啟飯局聊天室", async () => {
+    const hosted = { id: "attendance-event", title: "出席管理測試飯局", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "測試餐廳", venueAddress: "台北市", status: "published", capacity: 2 };
+    const payload = { hosted: [{ event: hosted, pendingApplications: [], attendances: [{ attendance: { id: "attendance-1", userId: "member-1", status: "attended" }, member: { displayName: "小安" } }] }], applied: [] };
+    const fetchMock = vi.fn((url: string, options?: RequestInit) => {
+      if (url === "/api/me/events") return Promise.resolve({ ok: true, status: 200, json: async () => payload });
+      if (url === "/api/notifications") return Promise.resolve({ ok: true, status: 200, json: async () => ({ notifications: [] }) });
+      if (url === "/api/me/review-tasks") return Promise.resolve({ ok: true, status: 200, json: async () => ({ tasks: [] }) });
+      if (url === "/api/events/attendance-event/attendance" && options?.method === "PATCH") return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+      return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+    });
+    const onOpenChat = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<MyEventsManagement onBack={() => undefined} onOpenChat={onOpenChat} />);
+
+    expect(await screen.findByText("小安")).not.toBeNull();
+    expect(screen.getByText("出席").className).toContain("bg-emerald-600");
+    expect(screen.getByText("遲到").className).toContain("bg-slate-100");
+    fireEvent.click(screen.getByText("傳送訊息"));
+    expect(onOpenChat).toHaveBeenCalledWith({ eventId: "attendance-event", eventTitle: "出席管理測試飯局", memberName: "小安" });
+
+    fireEvent.click(screen.getByText("爽約"));
+    expect(screen.getByRole("dialog", { name: "確認標記爽約？" })).not.toBeNull();
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/events/attendance-event/attendance", expect.anything());
+    fireEvent.click(screen.getByText("返回"));
+    expect(screen.queryByRole("dialog", { name: "確認標記爽約？" })).toBeNull();
+
+    fireEvent.click(screen.getByText("爽約"));
+    fireEvent.click(screen.getByText("確認標記爽約"));
+    expect(fetchMock).toHaveBeenCalledWith("/api/events/attendance-event/attendance", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ userId: "member-1", status: "no_show" }) }));
+  });
 });
