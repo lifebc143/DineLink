@@ -20,14 +20,22 @@ export function taipeiSchedule(now = new Date()) {
   return { year: part("year"), month: part("month"), day: part("day"), hour: part("hour") };
 }
 
-export async function createApplicationBackup({ initiatedBy, now = new Date(), scheduledOnly = false }: { initiatedBy?: string; now?: Date; scheduledOnly?: boolean } = {}) {
+async function notifyBackupAdmins(type: "backup_succeeded" | "backup_failed", title: string, body: string, payload: Record<string, unknown>) {
+  const admins = await db.select({ id: users.id }).from(users).where(and(eq(users.role, "admin"), eq(users.accountStatus, "active")));
+  if (admins.length) await db.insert(notifications).values(admins.map((admin) => ({ recipientId: admin.id, type, title, body, payload })));
+}
+
+export async function createApplicationBackup({ initiatedBy, now = new Date(), scheduledOnly = false, manual = false }: { initiatedBy?: string; now?: Date; scheduledOnly?: boolean; manual?: boolean } = {}) {
   const settings = await getBackupSettings();
   const local = taipeiSchedule(now);
   if (scheduledOnly && (!settings.enabled || local.day !== settings.dayOfMonth || local.hour !== settings.hourTaipei)) return { skipped: true as const, reason: "not_due" };
-  const scheduleKey = `${local.year}-${String(local.month).padStart(2, "0")}`;
-  const [already] = await db.select({ id: backupSnapshots.id }).from(backupSnapshots).where(eq(backupSnapshots.scheduleKey, scheduleKey)).limit(1);
-  if (already) return { skipped: true as const, reason: "already_created", snapshotId: already.id };
-  const [snapshot] = await db.insert(backupSnapshots).values({ scheduleKey, initiatedBy, status: "running" }).returning();
+  const monthlyKey = `${local.year}-${String(local.month).padStart(2, "0")}`;
+  const scheduleKey = manual ? `${monthlyKey}-manual-${now.toISOString().replace(/[:.]/g, "")}` : monthlyKey;
+  if (!manual) {
+    const [already] = await db.select({ id: backupSnapshots.id }).from(backupSnapshots).where(eq(backupSnapshots.scheduleKey, scheduleKey)).limit(1);
+    if (already) return { skipped: true as const, reason: "already_created", snapshotId: already.id };
+  }
+  const [snapshot] = await db.insert(backupSnapshots).values({ scheduleKey, initiatedBy, status: "running", trigger: manual ? "manual" : "scheduled" }).returning();
   try {
     const [memberRows, eventRows, applicationRows, attendanceRows, messageRows, reviewRows, notificationRows, pointRows, paymentRows, automationRows] = await Promise.all([
       db.select().from(users), db.select().from(diningEvents), db.select().from(eventApplications), db.select().from(eventAttendances), db.select().from(chatMessages), db.select().from(eventReviews), db.select().from(notifications), db.select().from(pointTransactions), db.select().from(paymentTransactions), db.select().from(automationJobs),
@@ -41,9 +49,12 @@ export async function createApplicationBackup({ initiatedBy, now = new Date(), s
     const retained = await db.select({ id: backupSnapshots.id }).from(backupSnapshots).where(eq(backupSnapshots.status, "succeeded")).orderBy(desc(backupSnapshots.createdAt));
     const staleIds = retained.slice(settings.retentionCount).map((row) => row.id);
     if (staleIds.length) await db.execute(sql`UPDATE backup_snapshots SET status = 'expired' WHERE id IN (${sql.join(staleIds.map((id) => sql`${id}`), sql`, `)})`);
+    await notifyBackupAdmins("backup_succeeded", "資料備份已完成", `${manual ? "手動" : "月度"}應用資料快照已完成，可於 Admin 後台下載與檢視校驗結果。`, { snapshotId: completed.id, trigger: completed.trigger, checksumSha256: completed.checksumSha256, byteSize: completed.byteSize });
     return { skipped: false as const, snapshot: completed };
   } catch (error) {
-    await db.update(backupSnapshots).set({ status: "failed", failureMessage: error instanceof Error ? error.message.slice(0, 500) : "Unknown backup error", completedAt: new Date() }).where(eq(backupSnapshots.id, snapshot.id));
+    const message = error instanceof Error ? error.message.slice(0, 500) : "Unknown backup error";
+    await db.update(backupSnapshots).set({ status: "failed", failureMessage: message, completedAt: new Date() }).where(eq(backupSnapshots.id, snapshot.id));
+    await notifyBackupAdmins("backup_failed", "資料備份失敗", `備份作業未完成：${message}`, { snapshotId: snapshot.id, trigger: manual ? "manual" : "scheduled" });
     throw error;
   }
 }

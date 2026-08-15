@@ -31,10 +31,12 @@ export const applicationStatusEnum = pgEnum("application_status", ["pending", "a
 export const attendanceStatusEnum = pgEnum("attendance_status", ["confirmed", "attended", "late", "no_show", "excused"]);
 export const depositStatusEnum = pgEnum("deposit_status", ["held", "released", "forfeited", "refunded"]);
 export const pointTransactionTypeEnum = pgEnum("point_transaction_type", ["top_up", "deposit_hold", "deposit_release", "deposit_forfeit", "reward", "adjustment"]);
-export const notificationTypeEnum = pgEnum("notification_type", ["application_submitted", "application_approved", "application_rejected", "application_cancelled", "attendance_updated", "event_reminder", "event_cancelled", "event_unmatched", "member_no_show", "new_message", "review_request", "safety_alert"]);
+export const notificationTypeEnum = pgEnum("notification_type", ["application_submitted", "application_approved", "application_rejected", "application_cancelled", "attendance_updated", "event_reminder", "event_cancelled", "event_unmatched", "member_no_show", "new_message", "review_request", "safety_alert", "backup_succeeded", "backup_failed", "backup_restore_requested"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "succeeded", "failed", "refunded", "cancelled"]);
 export const paymentPurposeEnum = pgEnum("payment_purpose", ["point_top_up", "membership", "restaurant_campaign"]);
 export const backupStatusEnum = pgEnum("backup_status", ["running", "succeeded", "failed", "expired"]);
+export const backupTriggerEnum = pgEnum("backup_trigger", ["scheduled", "manual"]);
+export const restoreRequestStatusEnum = pgEnum("restore_request_status", ["pending", "cancelled", "reviewed"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -128,6 +130,7 @@ export const backupSnapshots = pgTable("backup_snapshots", {
   id: uuid("id").defaultRandom().primaryKey(),
   scheduleKey: varchar("schedule_key", { length: 32 }).notNull(),
   status: backupStatusEnum("status").notNull().default("running"),
+  trigger: backupTriggerEnum("trigger").notNull().default("scheduled"),
   storageKey: text("storage_key"),
   checksumSha256: varchar("checksum_sha256", { length: 64 }),
   byteSize: integer("byte_size"),
@@ -140,6 +143,17 @@ export const backupSnapshots = pgTable("backup_snapshots", {
   uniqueIndex("backup_snapshots_schedule_key_unique").on(table.scheduleKey),
   index("backup_snapshots_created_at_idx").on(table.createdAt),
 ]);
+
+/** Restore is intentionally request-only: destructive execution requires separate human confirmation. */
+export const backupRestoreRequests = pgTable("backup_restore_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  snapshotId: uuid("snapshot_id").notNull().references(() => backupSnapshots.id, { onDelete: "restrict" }),
+  requestedBy: uuid("requested_by").notNull().references(() => users.id, { onDelete: "restrict" }),
+  reason: varchar("reason", { length: 500 }).notNull(),
+  status: restoreRequestStatusEnum("status").notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+}, (table) => [index("backup_restore_requests_status_idx").on(table.status, table.createdAt)]);
 
 export const eventApplications = pgTable("event_applications", {
   id: uuid("id").defaultRandom().primaryKey(),
