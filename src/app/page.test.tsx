@@ -220,6 +220,25 @@ describe("發起飯局表單", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/applications/55555555-5555-4555-8555-555555555555/cancel", { method: "POST" });
   });
 
+  it("從飯局聊天室深度連結載入真實歷史訊息，並以 POST 發送新訊息", async () => {
+    window.history.replaceState({}, "", "/?tab=messages&eventId=chat-event&eventTitle=%E6%B8%AC%E8%A9%A6%E9%A3%AF%E5%B1%80&member=%E5%B0%8F%E5%AE%89");
+    const fetchMock = vi.fn((url: string, options?: RequestInit) => {
+      if (url === "/api/auth/session") return Promise.resolve({ ok: true, status: 200, json: async () => ({ user: { id: "current-user", displayName: "主辦人" } }) });
+      if (url === "/api/events") return Promise.resolve({ ok: true, status: 200, json: async () => ({ events: [] }) });
+      if (url === "/api/events/chat-event/messages" && !options?.method) return Promise.resolve({ ok: true, status: 200, json: async () => ({ messages: [{ message: { id: "message-1", content: "我已經出發了", createdAt: "2026-08-20T10:30:00.000Z" }, author: { id: "member-1", displayName: "小安" } }] }) });
+      if (url === "/api/events/chat-event/messages" && options?.method === "POST") return Promise.resolve({ ok: true, status: 201, json: async () => ({ message: { id: "message-2" } }) });
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<Home />);
+
+    expect(await screen.findByText("我已經出發了")).not.toBeNull();
+    expect(screen.getByText("飯局群組聊天室 · 可傳訊給 小安")).not.toBeNull();
+    fireEvent.change(screen.getByPlaceholderText("輸入訊息"), { target: { value: "收到，餐廳見！" } });
+    fireEvent.click(screen.getByLabelText("發送訊息"));
+    expect(fetchMock).toHaveBeenCalledWith("/api/events/chat-event/messages", expect.objectContaining({ method: "POST", body: JSON.stringify({ content: "收到，餐廳見！" }) }));
+  });
+
   it("個人頁會顯示信用 Rating 趨勢與歷史出席率洞察", async () => {
     vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/me/insights" ? { creditScore: 88, completedEventCount: 4, attendanceRate: 75, attendanceTotal: 4, trend: [{ label: "8/1", score: 86 }, { label: "8/8", score: 88 }], dimensions: { punctuality: 4.5, politeness: 4.8, interaction: 4.2 } } : {} })));
     render(<Home />);
