@@ -144,4 +144,20 @@ describe("MyEventsManagement 進階飯局管理", () => {
     fireEvent.click(screen.getByText("確認標記爽約"));
     expect(fetchMock).toHaveBeenCalledWith("/api/events/attendance-event/attendance", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ userId: "member-1", status: "no_show" }) }));
   });
+
+  it("已確認的參加者可從已申請飯局卡片進入正確群組聊天室，待審核者不會看到入口", async () => {
+    const confirmedEvent = { id: "confirmed-event", title: "已確認晚餐", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "餐廳", venueAddress: "台北市", status: "published", capacity: 2 };
+    const pendingEvent = { id: "pending-event", title: "待審核午餐", eventStartAt: "2026-08-21T11:30:00.000Z", restaurantName: "餐廳", venueAddress: "台北市", status: "published", capacity: 2 };
+    const payload = { hosted: [], applied: [{ application: { id: "confirmed-application", status: "approved" }, event: confirmedEvent, host: { displayName: "Mia" } }, { application: { id: "pending-application", status: "pending" }, event: pendingEvent, host: { displayName: "Kevin" } }] };
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/me/events" ? payload : url === "/api/notifications" ? { notifications: [] } : { tasks: [] } })));
+    const onOpenChat = vi.fn();
+    render(<MyEventsManagement onBack={() => undefined} onOpenChat={onOpenChat} />);
+
+    await screen.findByText("尚未發起飯局");
+    fireEvent.click(screen.getByText("我已申請的飯局"));
+    expect(await screen.findByText("已確認晚餐")).not.toBeNull();
+    expect(screen.getAllByText("進入群組聊天室")).toHaveLength(1);
+    fireEvent.click(screen.getByText("進入群組聊天室"));
+    expect(onOpenChat).toHaveBeenCalledWith({ eventId: "confirmed-event", eventTitle: "已確認晚餐", memberName: "Mia" });
+  });
 });
