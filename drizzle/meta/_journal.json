@@ -29,6 +29,13 @@
       "when": 1786717427515,
       "tag": "0003_slimy_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786765409067,
+      "tag": "0004_slow_daredevil",
+      "breakpoints": true
     }
   ]
 }

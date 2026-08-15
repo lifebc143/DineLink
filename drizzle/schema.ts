@@ -34,6 +34,7 @@ export const pointTransactionTypeEnum = pgEnum("point_transaction_type", ["top_u
 export const notificationTypeEnum = pgEnum("notification_type", ["application_submitted", "application_approved", "application_rejected", "application_cancelled", "attendance_updated", "event_reminder", "event_cancelled", "event_unmatched", "member_no_show", "new_message", "review_request", "safety_alert"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "succeeded", "failed", "refunded", "cancelled"]);
 export const paymentPurposeEnum = pgEnum("payment_purpose", ["point_top_up", "membership", "restaurant_campaign"]);
+export const backupStatusEnum = pgEnum("backup_status", ["running", "succeeded", "failed", "expired"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -109,6 +110,36 @@ export const automationJobs = pgTable("automation_jobs", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("automation_jobs_task_uid_unique").on(table.cronTaskUid)]);
+
+/** Singleton admin configuration. The hourly trusted job checks Taiwan local day/hour before writing a snapshot. */
+export const backupSettings = pgTable("backup_settings", {
+  id: varchar("id", { length: 48 }).primaryKey().default("monthly_application_data"),
+  dayOfMonth: integer("day_of_month").notNull().default(1),
+  hourTaipei: integer("hour_taipei").notNull().default(3),
+  retentionCount: integer("retention_count").notNull().default(3),
+  enabled: boolean("enabled").notNull().default(true),
+  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Snapshot payloads reside in S3; PostgreSQL keeps integrity metadata and retention visibility only. */
+export const backupSnapshots = pgTable("backup_snapshots", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  scheduleKey: varchar("schedule_key", { length: 32 }).notNull(),
+  status: backupStatusEnum("status").notNull().default("running"),
+  storageKey: text("storage_key"),
+  checksumSha256: varchar("checksum_sha256", { length: 64 }),
+  byteSize: integer("byte_size"),
+  tableCounts: jsonb("table_counts").$type<Record<string, number>>().notNull().default({}),
+  initiatedBy: uuid("initiated_by").references(() => users.id, { onDelete: "set null" }),
+  failureMessage: varchar("failure_message", { length: 500 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+}, (table) => [
+  uniqueIndex("backup_snapshots_schedule_key_unique").on(table.scheduleKey),
+  index("backup_snapshots_created_at_idx").on(table.createdAt),
+]);
 
 export const eventApplications = pgTable("event_applications", {
   id: uuid("id").defaultRandom().primaryKey(),
