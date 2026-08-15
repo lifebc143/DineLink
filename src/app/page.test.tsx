@@ -298,6 +298,39 @@ describe("發起飯局表單", () => {
     expect(intent.searchParams.get("url")).toContain("?event=1");
   });
 
+  it("飯局詳情只有在 POST 報名 API 回傳 201 後才顯示申請成功", async () => {
+    const fetchMock = vi.fn((url: string, options?: RequestInit) => {
+      if (url === "/api/events/1/applications" && options?.method === "POST") return Promise.resolve({ ok: true, status: 201, json: async () => ({ application: { id: "application-1" } }) });
+      if (url === "/api/events") return Promise.resolve({ ok: true, status: 200, json: async () => ({ events: [] }) });
+      if (url === "/api/auth/session") return Promise.resolve({ ok: true, status: 200, json: async () => ({ user: null }) });
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<Home />);
+
+    fireEvent.click(screen.getAllByText("我要報名")[0]);
+    fireEvent.click(screen.getByText("送出報名申請"));
+
+    expect(await screen.findByText("申請已送出，等待主辦人審核")).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith("/api/events/1/applications", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("飯局詳情的申請 API 失敗時顯示錯誤與登入入口，不得假稱申請已送出", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string, options?: RequestInit) => {
+      if (url === "/api/events/1/applications" && options?.method === "POST") return Promise.resolve({ ok: false, status: 401, json: async () => ({ error: "UNAUTHENTICATED" }) });
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ events: [], user: null }) });
+    }));
+    render(<Home />);
+
+    fireEvent.click(screen.getAllByText("我要報名")[0]);
+    fireEvent.click(screen.getByText("送出報名申請"));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("請先登入後再送出飯局申請");
+    expect(within(alert).getByText("立即登入").getAttribute("href")).toBe("/api/auth/login");
+    expect(screen.queryByText("申請已送出，等待主辦人審核")).toBeNull();
+  });
+
   it("公開 event 深度連結會自動展開對應飯局詳情", async () => {
     window.history.replaceState({}, "", "/?event=2");
     render(<Home />);

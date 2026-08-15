@@ -8,6 +8,7 @@ vi.mock("@/lib/db", () => ({ db: { transaction: (callback: (tx: any) => Promise<
 import { POST as completeEvent } from "@/app/api/events/[eventId]/complete/route";
 import { POST as submitReview } from "@/app/api/events/[eventId]/reviews/route";
 import { POST as reviewApplication } from "@/app/api/applications/[applicationId]/review/route";
+import { POST as createApplication } from "@/app/api/events/[eventId]/applications/route";
 
 function transactionWith(selectResults: unknown[][]) {
   const inserts: unknown[] = [];
@@ -35,6 +36,38 @@ const applicant = { id: "11111111-1111-4111-8111-111111111111", displayName: "Me
 beforeEach(() => { state.user = host; state.transaction = null; });
 
 describe("DineLink transaction Route Handlers", () => {
+  it("建立申請資料與主辦人待審核通知，且不再以保證金或點數阻擋報名", async () => {
+    const fixture = transactionWith([
+      [{ id: "event-id", hostId: host.id, status: "published" }],
+      [],
+    ]);
+    state.user = { ...applicant, pointBalance: 0 };
+    state.transaction = async (callback) => callback(fixture.tx);
+
+    const response = await createApplication(new Request("http://localhost/api/events/event-id/applications", { method: "POST", body: JSON.stringify({ introduction: "期待認識新朋友" }) }) as never, { params: Promise.resolve({ eventId: "event-id" }) });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ application: { id: "created-id" } });
+    expect(fixture.inserts).toHaveLength(2);
+    expect(fixture.inserts[0]).toMatchObject({ eventId: "event-id", applicantId: applicant.id, introduction: "期待認識新朋友" });
+    expect(fixture.inserts[1]).toMatchObject({ recipientId: host.id, eventId: "event-id", applicationId: "created-id", type: "application_submitted" });
+  });
+
+  it("拒絕同一會員對同一飯局重複建立申請，避免重複通知主辦人", async () => {
+    const fixture = transactionWith([
+      [{ id: "event-id", hostId: host.id, status: "published" }],
+      [{ id: "existing-application" }],
+    ]);
+    state.user = applicant;
+    state.transaction = async (callback) => callback(fixture.tx);
+
+    const response = await createApplication(new Request("http://localhost/api/events/event-id/applications", { method: "POST", body: JSON.stringify({}) }) as never, { params: Promise.resolve({ eventId: "event-id" }) });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: "DUPLICATE_APPLICATION" });
+    expect(fixture.inserts).toHaveLength(0);
+  });
+
   it("releases held points and creates review notices when an attended member's event completes", async () => {
     const fixture = transactionWith([
       [{ id: "event-id", hostId: host.id, status: "published" }],
