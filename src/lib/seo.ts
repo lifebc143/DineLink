@@ -25,6 +25,11 @@ export function eventDescription({ event }: PublicEvent) {
 export function eventJsonLd(publicEvent: PublicEvent) {
   const { event, host } = publicEvent;
   const path = publicEventPath(event.id);
+  const eventStatus = event.status === "cancelled"
+    ? "https://schema.org/EventCancelled"
+    : event.previousStartAt
+      ? "https://schema.org/EventRescheduled"
+      : "https://schema.org/EventScheduled";
   return {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -33,7 +38,8 @@ export function eventJsonLd(publicEvent: PublicEvent) {
     startDate: event.eventStartAt.toISOString(),
     ...(event.eventEndAt ? { endDate: event.eventEndAt.toISOString() } : {}),
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    eventStatus: "https://schema.org/EventScheduled",
+    eventStatus,
+    ...(eventStatus === "https://schema.org/EventRescheduled" ? { previousStartDate: event.previousStartAt?.toISOString() } : {}),
     image: [absoluteUrl("/opengraph-image")],
     url: absoluteUrl(path),
     location: {

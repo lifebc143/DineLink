@@ -26,9 +26,9 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
       title: `${event.title}｜${SITE_NAME}`,
       description,
       url: path,
-      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "DineLink 約飯社交平台" }],
+      images: [{ url: `${publicEventPath(event.id)}/opengraph-image`, width: 1200, height: 630, alt: `${event.title}｜DineLink 飯局` }],
     },
-    twitter: { card: "summary_large_image", title: `${event.title}｜${SITE_NAME}`, description, images: ["/opengraph-image"] },
+    twitter: { card: "summary_large_image", title: `${event.title}｜${SITE_NAME}`, description, images: [`${publicEventPath(event.id)}/opengraph-image`] },
   };
 }
 

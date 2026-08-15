@@ -93,6 +93,7 @@ export const diningEvents = pgTable("dining_events", {
   reminderTaskUid: varchar("reminder_task_uid", { length: 65 }),
   reminderScheduledFor: timestamp("reminder_scheduled_for", { withTimezone: true }),
   cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  previousStartAt: timestamp("previous_start_at", { withTimezone: true }),
   unmatchedAt: timestamp("unmatched_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

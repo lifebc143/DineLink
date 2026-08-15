@@ -1,0 +1,1 @@
+ALTER TABLE "dining_events" ADD COLUMN "previous_start_at" timestamp with time zone;

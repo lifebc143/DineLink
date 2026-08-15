@@ -35,7 +35,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (existing.hostId !== user.id) return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
   if (["completed", "cancelled"].includes(existing.status)) return NextResponse.json({ error: "EVENT_NOT_EDITABLE" }, { status: 409 });
   try {
-    const [event] = await db.update(diningEvents).set({ ...parsed.data, eventStartAt: new Date(parsed.data.eventStartAt), updatedAt: new Date() }).where(eq(diningEvents.id, eventId)).returning();
+    const nextStartAt = new Date(parsed.data.eventStartAt);
+    const didReschedule = existing.eventStartAt.getTime() !== nextStartAt.getTime();
+    const [event] = await db.update(diningEvents).set({ ...parsed.data, eventStartAt: nextStartAt, ...(didReschedule ? { previousStartAt: existing.eventStartAt } : {}), updatedAt: new Date() }).where(eq(diningEvents.id, eventId)).returning();
     return NextResponse.json({ event });
   } catch {
     return NextResponse.json({ error: "EVENT_UPDATE_FAILED" }, { status: 500 });

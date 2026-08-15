@@ -235,3 +235,12 @@
 - [x] 提交本次 SEO 與可存取性優化程式碼，保留現有完整 Commit 歷史。
 - [x] 推送 SEO 最佳化提交至 GitHub `lifebc143/DineLink` 的 `main` 分支。
 - [x] 驗證 GitHub 遠端 main 與本地提交一致，並回報同步結果。
+- [x] 核對最新 SEO、結構化資料、sitemap、robots、可存取性與測試驗證內容，整理可稽核事實。
+- [x] 撰寫 DineLink SEO 與可存取性優化技術報告，說明已完成項目、檢測結果、限制與行動建議。
+- [x] 檢查報告並交付可下載 Markdown 文件。
+- [x] 盤點飯局取消／改期狀態、公開探索資料與既有 OG 圖片路由，定義安全的 SEO 資料邊界。
+- [x] 為每場公開飯局產生專屬 OG 分享圖片，呈現飯局名稱、時間、餐廳與完整地址。
+- [x] 讓 Event JSON-LD 依飯局狀態輸出 scheduled、cancelled 或 rescheduled，避免過期資訊。
+- [x] 建立真實公開飯局的城市與主題探索入口、Metadata、canonical 與 sitemap 索引規則。
+- [x] 補齊專屬 OG、活動狀態與城市／主題探索頁的 SEO／可存取性回歸測試。
+- [x] 執行 production build 與自動發布，提供 Google Search Console／PageSpeed Insights 的正式設定指引。

@@ -13,7 +13,7 @@ const request = (value: unknown) => new Request(`http://localhost/api/events/${e
 const context = { params: Promise.resolve({ eventId }) };
 
 describe("PUT /api/events/[eventId]", () => {
-  beforeEach(() => { vi.clearAllMocks(); mocks.getCurrentUser.mockResolvedValue({ id: hostId }); mocks.select.mockReturnValue({ from: () => ({ where: () => ({ limit: async () => [{ id: eventId, hostId, status: "published" }] }) }) }); });
+  beforeEach(() => { vi.clearAllMocks(); mocks.getCurrentUser.mockResolvedValue({ id: hostId }); mocks.select.mockReturnValue({ from: () => ({ where: () => ({ limit: async () => [{ id: eventId, hostId, status: "published", eventStartAt: new Date("2026-08-20T10:30:00.000Z") }] }) }) }); });
 
   it("未登入時拒絕更新", async () => {
     mocks.getCurrentUser.mockResolvedValue(null);
@@ -38,5 +38,6 @@ describe("PUT /api/events/[eventId]", () => {
     expect(response.status).toBe(200);
     expect((await response.json()).event).toMatchObject({ title: body.title, restaurantName: body.restaurantName, venueAddress: body.venueAddress });
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ title: body.title, restaurantName: body.restaurantName, venueAddress: body.venueAddress, capacity: 6 }));
+    expect(set).toHaveBeenCalledWith(expect.objectContaining({ previousStartAt: new Date("2026-08-20T10:30:00.000Z") }));
   });
 });
