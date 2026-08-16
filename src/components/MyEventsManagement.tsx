@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, Bell, CalendarDays, Check, ChevronDown, MessageCircle, Star, X } from "lucide-react";
+import LoadingState from "@/components/LoadingState";
 import React, { useEffect, useMemo, useState } from "react";
 
 type EventRecord = { id: string; title: string; description?: string | null; eventStartAt: string; restaurantName: string | null; venueAddress: string; placeId?: string | null; latitude?: string | null; longitude?: string | null; paymentMode?: "host_treats" | "split_bill" | "men_treat_women"; budgetMin?: number | null; budgetMax?: number | null; status: string; capacity: number };
@@ -99,7 +100,7 @@ export default function MyEventsManagement({ onBack, onOpenChat, initialView = "
     <div className="rounded-[30px] bg-slate-950 p-5 text-white"><p className="text-[11px] font-bold tracking-[0.2em] text-emerald-200">MY DINING PLANS</p><h1 className="mt-2 text-[29px] font-black">我的飯局</h1><p className="mt-2 text-sm leading-relaxed text-emerald-100">快速掌握行程、主辦通知、出席紀錄與飯後信用評價。</p></div>
     <div className="mt-4 grid grid-cols-4 gap-1 rounded-2xl bg-white/80 p-1.5 shadow-sm"><ViewButton active={view === "list"} onClick={() => setView("list")} icon={<Check className="h-4 w-4" />} label="管理" /><ViewButton active={view === "calendar"} onClick={() => setView("calendar")} icon={<CalendarDays className="h-4 w-4" />} label="日曆" /><ViewButton active={view === "notifications"} onClick={() => setView("notifications")} icon={<Bell className="h-4 w-4" />} label={unread ? `通知 ${unread}` : "通知"} /><ViewButton active={view === "reviews"} onClick={() => setView("reviews")} icon={<Star className="h-4 w-4" />} label="評價" /></div>
     {focusEventId && !loading && !message && <p className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-bold text-emerald-800">已由通知帶你前往對應飯局；該飯局以綠色外框標示。</p>}
-    {loading && <p className="mt-4 rounded-2xl bg-white p-5 text-center text-sm font-semibold text-slate-500">正在讀取你的飯局…</p>}
+    {loading && <LoadingState className="mt-4" label="正在讀取你的飯局…" description="同步行程、通知、出席與互評資料。" />}
     {message && <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900">{message}{message.startsWith("請先登入") && <a href="/api/auth/login" className="mt-3 inline-block rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white">登入並查看我的飯局</a>}</div>}
     {!loading && !message && view === "list" && <ManageView active={list} setActive={setList} data={data} focusEventId={focusEventId} review={reviewApplication} updateAttendance={requestAttendanceUpdate} cancel={cancel} onEdit={setEditTarget} onOpenChat={onOpenChat} />}
     {!loading && !message && view === "calendar" && <CalendarView items={allEvents} />}

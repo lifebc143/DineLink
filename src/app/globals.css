@@ -184,6 +184,11 @@
   .pressable:active { transform: scale(0.97); }
   .card-lift { transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1); }
   @media (hover:hover) { .card-lift:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(30,20,70,0.16); } }
+  .dine-loading-state { display: flex; min-height: 7rem; align-items: center; justify-content: center; gap: 0.875rem; border-radius: 1.5rem; background: rgba(255,255,255,0.78); padding: 1.25rem; text-align: left; box-shadow: 0 10px 25px rgba(55,28,98,0.08); backdrop-filter: blur(12px); }
+  .dine-loading-state-compact { min-height: 0; border-radius: 1rem; justify-content: flex-start; padding: 0.75rem; box-shadow: none; }
+  .dine-loading-indicator { position: relative; display: inline-grid; flex: none; place-items: center; }
+  .dine-loading-orbit { position: absolute; inset: 0; border: 3px solid rgba(139,92,246,0.18); border-top-color: #8b5cf6; border-right-color: #ec4899; border-radius: 999px; animation: dine-loading-spin 840ms linear infinite; }
+  .dine-loading-core { height: 30%; width: 30%; border-radius: 999px; background: linear-gradient(135deg, #fb7185, #a855f7, #fb923c); box-shadow: 0 0 0 4px rgba(236,72,153,0.10); animation: dine-loading-pulse 1.15s cubic-bezier(0.23, 1, 0.32, 1) infinite alternate; }
 }
 
 .phone-shell::before {
@@ -203,7 +208,9 @@
 .mesh-orb-three { width: 12rem; height: 12rem; right: -4rem; top: -4rem; background: radial-gradient(circle at 35% 40%, #fb923c 0 17%, #db2777 42%, #7c3aed 68%, transparent 73%); }
 .page-enter { animation: page-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both; }
 @keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) { .page-enter { animation: none; } .pressable, .card-lift { transition: none; } }
+@keyframes dine-loading-spin { to { transform: rotate(360deg); } }
+@keyframes dine-loading-pulse { from { transform: scale(0.84); opacity: 0.72; } to { transform: scale(1.12); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .page-enter, .dine-loading-orbit, .dine-loading-core { animation: none; } .pressable, .card-lift { transition: none; } }
 
 /* 首頁頂部控制項需避開 iOS／Android 的系統狀態欄與瀏海安全區。 */
 .app-top-safe { padding-top: max(1.25rem, calc(env(safe-area-inset-top) + 0.75rem)); }
