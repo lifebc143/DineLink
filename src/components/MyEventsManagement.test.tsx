@@ -40,9 +40,13 @@ describe("MyEventsManagement 進階飯局管理", () => {
     fireEvent.click(screen.getByText("評價"));
     fireEvent.click(await screen.findByText("填寫出席評價"));
     fireEvent.change(screen.getByPlaceholderText("例如：準時抵達、互動愉快。"), { target: { value: "準時抵達" } });
-    fireEvent.click(screen.getAllByText("3")[0]!);
+    const punctualityThree = screen.getByRole("button", { name: "準時 3 分" });
+    fireEvent.click(punctualityThree);
+    expect(punctualityThree.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "準時 5 分" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByText("準時：3 / 5")).not.toBeNull();
     fireEvent.click(screen.getByText("送出評價"));
-    expect(fetchMock).toHaveBeenCalledWith("/api/events/event-1/reviews", expect.objectContaining({ method: "POST", body: expect.stringContaining("attendanceNote") }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/events/event-1/reviews", expect.objectContaining({ method: "POST", body: expect.stringContaining('"punctualityScore":3') }));
   });
 
   it("可依主辦與參與分類飯局，並切換該飯局的提醒狀態", async () => {
