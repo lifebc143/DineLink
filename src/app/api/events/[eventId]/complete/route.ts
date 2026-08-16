@@ -38,7 +38,10 @@ export async function POST(_: Request, { params }: { params: Promise<{ eventId: 
       }
       await tx.update(diningEvents).set({ status: "completed", completedAt: new Date(), updatedAt: new Date() }).where(eq(diningEvents.id, eventId));
       const attendees = attendances.filter((entry) => ["attended", "late"].includes(entry.status));
-      if (attendees.length) await tx.insert(notifications).values(attendees.map((entry) => ({ recipientId: entry.userId, eventId, type: "review_request" as const, title: "飯局已完成，邀請你留下互評", body: "請針對同場成員評估準時、禮貌與趣味，幫助社群建立信任。" })));
+      if (attendees.length) {
+        const reviewRecipientIds = [...new Set([...attendees.map((entry) => entry.userId), event.hostId])];
+        await tx.insert(notifications).values(reviewRecipientIds.map((recipientId) => ({ recipientId, eventId, type: "review_request" as const, title: "飯局已完成，邀請你留下互評", body: "請針對同場成員評估準時、禮貌與趣味，幫助社群建立信任。" })));
+      }
       return { status: "completed" as const, releasedCount, forfeitedCount };
     });
     return NextResponse.json(result);

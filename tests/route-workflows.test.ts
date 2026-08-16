@@ -80,7 +80,10 @@ describe("DineLink transaction Route Handlers", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ status: "completed", releasedCount: 1, forfeitedCount: 0 });
     expect(fixture.inserts).toHaveLength(2);
-    expect(fixture.inserts[1]).toEqual([expect.objectContaining({ recipientId: applicant.id, type: "review_request" })]);
+    expect(fixture.inserts[1]).toEqual(expect.arrayContaining([
+      expect.objectContaining({ recipientId: applicant.id, type: "review_request" }),
+      expect.objectContaining({ recipientId: host.id, type: "review_request" }),
+    ]));
   });
 
   it("releases the same deposit for a late member", async () => {
