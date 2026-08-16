@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, avg, eq, inArray } from "drizzle-orm";
+import { and, avg, count, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -22,10 +22,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const reviewerEligible = reviewer.id === event.hostId || attendance.some((entry) => entry.userId === reviewer.id);
       const revieweeEligible = input.data.revieweeId === event.hostId || attendance.some((entry) => entry.userId === input.data.revieweeId);
       if (!reviewerEligible || !revieweeEligible) throw new Error("REVIEW_ATTENDANCE_REQUIRED");
-      const [created] = await tx.insert(eventReviews).values({ eventId, reviewerId: reviewer.id, revieweeId: input.data.revieweeId, punctualityScore: input.data.punctualityScore, politenessScore: input.data.politenessScore, funScore: input.data.funScore, privateNote: input.data.attendanceNote }).returning();
-      const [summary] = await tx.select({ punctuality: avg(eventReviews.punctualityScore), politeness: avg(eventReviews.politenessScore), fun: avg(eventReviews.funScore) }).from(eventReviews).where(eq(eventReviews.revieweeId, input.data.revieweeId));
-      const total = Number(summary?.punctuality ?? 0) + Number(summary?.politeness ?? 0) + Number(summary?.fun ?? 0);
+      const [reviewee] = await tx.select({ creditScore: users.creditScore }).from(users).where(eq(users.id, input.data.revieweeId)).limit(1);
+      const creditScoreBefore = reviewee?.creditScore ?? 70;
+      const [summary] = await tx.select({ reviewCount: count(eventReviews.id), punctuality: avg(eventReviews.punctualityScore), politeness: avg(eventReviews.politenessScore), fun: avg(eventReviews.funScore) }).from(eventReviews).where(eq(eventReviews.revieweeId, input.data.revieweeId));
+      const previousCount = Number(summary?.reviewCount ?? 0);
+      const nextAverage = (existing: string | null | undefined, submitted: number) => ((Number(existing ?? 0) * previousCount) + submitted) / (previousCount + 1);
+      const total = nextAverage(summary?.punctuality, input.data.punctualityScore) + nextAverage(summary?.politeness, input.data.politenessScore) + nextAverage(summary?.fun, input.data.funScore);
       const creditScore = Math.min(100, Math.max(0, Math.round(50 + total / 3 * 10)));
+      const [created] = await tx.insert(eventReviews).values({ eventId, reviewerId: reviewer.id, revieweeId: input.data.revieweeId, punctualityScore: input.data.punctualityScore, politenessScore: input.data.politenessScore, funScore: input.data.funScore, privateNote: input.data.attendanceNote, creditScoreBefore, creditScoreAfter: creditScore }).returning();
       await tx.update(users).set({ creditScore, updatedAt: new Date() }).where(eq(users.id, input.data.revieweeId));
       return created;
     });

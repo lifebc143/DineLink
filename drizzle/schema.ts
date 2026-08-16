@@ -96,6 +96,8 @@ export const diningEvents = pgTable("dining_events", {
   previousStartAt: timestamp("previous_start_at", { withTimezone: true }),
   unmatchedAt: timestamp("unmatched_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  reviewDueAt: timestamp("review_due_at", { withTimezone: true }),
+  reviewReminderSentAt: timestamp("review_reminder_sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
@@ -213,6 +215,8 @@ export const eventReviews = pgTable("event_reviews", {
   politenessScore: integer("politeness_score").notNull(),
   funScore: integer("fun_score").notNull(),
   privateNote: varchar("private_note", { length: 500 }),
+  creditScoreBefore: integer("credit_score_before"),
+  creditScoreAfter: integer("credit_score_after"),
   submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("event_reviews_reviewer_reviewee_unique").on(table.eventId, table.reviewerId, table.revieweeId),
