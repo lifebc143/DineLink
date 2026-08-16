@@ -162,6 +162,16 @@ describe("MyEventsManagement 進階飯局管理", () => {
     expect(await screen.findByText("目前沒有待評價飯局")).not.toBeNull();
   });
 
+  it("有完整出席紀錄時不會因非 published 狀態而停用完成飯局", async () => {
+    const hosted = { id: "legacy-status-event", title: "既有飯局狀態", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "測試餐廳", venueAddress: "台北市", status: "draft", capacity: 2 };
+    const payload = { hosted: [{ event: hosted, pendingApplications: [], attendances: [{ attendance: { id: "attendance-legacy", userId: "member-1", status: "attended" }, member: { id: "member-1", displayName: "小安" }, lastContact: null }] }], applied: [] };
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/me/events" ? payload : url === "/api/notifications" ? { notifications: [] } : { tasks: [] } })));
+    render(<MyEventsManagement onBack={() => undefined} />);
+
+    const completeButton = await screen.findByText("完成飯局並前往評價");
+    expect((completeButton as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("已完成且已有出席紀錄的主辦飯局仍會顯示前往評價入口", async () => {
     const completed = { id: "completed-event", title: "已完成飯局", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "測試餐廳", venueAddress: "台北市", status: "completed", capacity: 2 };
     const payload = { hosted: [{ event: completed, pendingApplications: [], attendances: [{ attendance: { id: "attendance-done", userId: "member-1", status: "attended" }, member: { id: "member-1", displayName: "小安" }, lastContact: null }] }], applied: [] };
