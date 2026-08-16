@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import MyEventsManagement from "./MyEventsManagement";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -143,6 +143,23 @@ describe("MyEventsManagement 進階飯局管理", () => {
     fireEvent.click(screen.getByText("爽約"));
     fireEvent.click(screen.getByText("確認標記爽約"));
     expect(fetchMock).toHaveBeenCalledWith("/api/events/attendance-event/attendance", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ userId: "member-1", status: "no_show" }) }));
+  });
+
+  it("主辦人完成所有出席紀錄後，可直接完成飯局並前往評價分頁", async () => {
+    const hosted = { id: "complete-event", title: "完成入口測試飯局", eventStartAt: "2026-08-20T11:30:00.000Z", restaurantName: "測試餐廳", venueAddress: "台北市", status: "published", capacity: 2 };
+    const payload = { hosted: [{ event: hosted, pendingApplications: [], attendances: [{ attendance: { id: "attendance-complete", userId: "member-1", status: "attended" }, member: { id: "member-1", displayName: "小安" }, lastContact: null }] }], applied: [] };
+    const fetchMock = vi.fn((url: string, options?: RequestInit) => {
+      if (url === "/api/me/events") return Promise.resolve({ ok: true, status: 200, json: async () => payload });
+      if (url === "/api/notifications") return Promise.resolve({ ok: true, status: 200, json: async () => ({ notifications: [] }) });
+      if (url === "/api/me/review-tasks") return Promise.resolve({ ok: true, status: 200, json: async () => ({ tasks: [] }) });
+      if (url === "/api/events/complete-event/complete" && options?.method === "POST") return Promise.resolve({ ok: true, status: 200, json: async () => ({ status: "completed" }) });
+      return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<MyEventsManagement onBack={() => undefined} />);
+    fireEvent.click(await screen.findByText("完成飯局並前往評價"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/events/complete-event/complete", { method: "POST" }));
+    expect(await screen.findByText("目前沒有待評價飯局")).not.toBeNull();
   });
 
   it("已確認的參加者可從已申請飯局卡片進入正確群組聊天室，待審核者不會看到入口", async () => {
