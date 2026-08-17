@@ -459,4 +459,13 @@ describe("發起飯局表單", () => {
     expect(await screen.findByText("申請已送出，管理員將進行簡易審核。")).not.toBeNull();
     expect(fetchMock).toHaveBeenCalledWith("/api/me/verification", { method: "POST" });
   });
+
+  it("管理者個人主頁顯示已授權標示而不顯示會員驗證申請", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/auth/session" ? { user: { displayName: "Life Onca", role: "admin", verificationStatus: "unverified" } } : url === "/api/events" ? { events: [] } : { creditScore: 100, completedEventCount: 1, attendanceRate: 100, attendanceTotal: 1, trend: [], dimensions: { punctuality: null, politeness: null, interaction: null } } })));
+    render(<Home />);
+    fireEvent.click(await screen.findByText("個人主頁"));
+    expect(await screen.findByText("管理者已授權")).not.toBeNull();
+    expect(screen.getByTestId("admin-authorization-card").textContent).toContain("不需另行申請會員驗證");
+    expect(screen.queryByRole("button", { name: "申請驗證" })).toBeNull();
+  });
 });
