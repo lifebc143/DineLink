@@ -292,3 +292,6 @@
 - [x] 修正 CI 的 Node／pnpm、依賴安裝、測試、PostgreSQL 測試環境或 production build 設定。
 - [x] 在本機執行與 CI 相同的驗證指令，提交並推送修正至 GitHub main。
 - [x] 確認 GitHub Actions 新一輪 Verify Next.js MVP 工作流程通過。
+- [x] 核對 GitHub main 與現有個人主頁頭像選擇、圓形裁切、JPG／PNG／WebP、5MB 驗證及 avatar_url 寫入流程。
+- [x] 補齊會員頭像上傳或全站同步的任何缺口，涵蓋頂部帳號入口、個人頁、飯局卡片與聊天室。
+- [x] 驗證頭像上傳 API、資料庫更新與跨頁即時顯示，通過測試後自動發布並同步 GitHub。
