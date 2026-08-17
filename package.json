@@ -10,6 +10,7 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:ci": "vitest run --exclude tests/postgres-connection.test.ts --exclude tests/postgres-schema.test.ts",
     "verify": "pnpm test && pnpm build && pnpm check",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"

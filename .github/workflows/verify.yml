@@ -20,13 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test -- --exclude tests/postgres-connection.test.ts --exclude tests/postgres-schema.test.ts
-      - run: pnpm build
+      - run: pnpm test:ci
+      - run: NODE_ENV=production pnpm build
       - run: pnpm check
