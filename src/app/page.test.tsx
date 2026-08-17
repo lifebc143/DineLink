@@ -382,12 +382,22 @@ describe("發起飯局表單", () => {
   });
 
   it("已登入時首頁頂部會顯示使用者名稱並可進入個人主頁", async () => {
-    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/auth/session" ? { user: { displayName: "AmmoliteLife" } } : { events: [] } })));
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/auth/session" ? { user: { displayName: "AmmoliteLife", avatarUrl: "https://storage.example/avatar.jpg" } } : { events: [] } })));
     render(<Home />);
     const accountButton = await screen.findByLabelText("開啟 AmmoliteLife 的個人主頁");
     expect(accountButton.textContent).toContain("AmmoliteLife");
+    const avatar = screen.getByAltText("AmmoliteLife 的會員頭像") as HTMLImageElement;
+    expect(avatar.src).toBe("https://storage.example/avatar.jpg");
     fireEvent.click(accountButton);
     expect(screen.getByText("產品規格與開發藍圖")).not.toBeNull();
+  });
+
+  it("首頁帳號頭像讀取失敗時會改顯示安全縮寫，不會留下破圖圖示", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/auth/session" ? { user: { displayName: "Life Onca", avatarUrl: "https://storage.example/missing.jpg" } } : { events: [] } })));
+    render(<Home />);
+    fireEvent.error(await screen.findByAltText("Life Onca 的會員頭像"));
+    expect(screen.queryByAltText("Life Onca 的會員頭像")).toBeNull();
+    expect(screen.getByLabelText("Life Onca 的會員縮寫").textContent).toBe("L");
   });
 
   it("個人主頁會同步登入名稱與頭像縮寫，更多選單可安全登出", async () => {

@@ -202,6 +202,13 @@ function ExploreMap({ events, onOpen }: { events: DiningEvent[]; onOpen: (event:
   );
 }
 
+function AccountAvatar({ avatarUrl, userName }: { avatarUrl?: string | null; userName: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [avatarUrl]);
+  if (avatarUrl && !failed) return <img src={avatarUrl} alt={`${userName} 的會員頭像`} onError={() => setFailed(true)} className="h-4 w-4 rounded-full object-cover" />;
+  return <span aria-label={`${userName} 的會員縮寫`} className="grid h-4 w-4 place-items-center rounded-full bg-orange-300 text-[9px] font-black text-slate-950">{userName.slice(0, 1).toUpperCase()}</span>;
+}
+
 function ExplorePage({ events, notice, onOpen, userName, userAvatarUrl, onAccountClick, loading }: { events: DiningEvent[]; notice: string; onOpen: (event: DiningEvent) => void; userName?: string | null; userAvatarUrl?: string | null; onAccountClick: () => void; loading: boolean }) {
   const [view, setView] = useState<ViewMode>("list");
   const [filter, setFilter] = useState("全部");
@@ -213,7 +220,7 @@ function ExplorePage({ events, notice, onOpen, userName, userAvatarUrl, onAccoun
         <div className="mesh-orb mesh-orb-one" />
         <div className="mesh-orb mesh-orb-two" />
         <div className="relative flex items-center justify-between">
-          {userName ? <button type="button" onClick={onAccountClick} aria-label={`開啟 ${userName} 的個人主頁`} className="pressable flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md">{userAvatarUrl ? <Image src={userAvatarUrl} alt={`${userName} 的會員頭像`} width={16} height={16} sizes="16px" className="h-4 w-4 rounded-full object-cover" /> : <MapPin className="h-3.5 w-3.5 text-orange-300" />}{userName}</button> : <a href="/api/auth/login" className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md"><MapPin className="h-3.5 w-3.5 text-orange-300" />登入／台北市</a>}
+          {userName ? <button type="button" onClick={onAccountClick} aria-label={`開啟 ${userName} 的個人主頁`} className="pressable flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md"><AccountAvatar avatarUrl={userAvatarUrl} userName={userName} />{userName}</button> : <a href="/api/auth/login" className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md"><MapPin className="h-3.5 w-3.5 text-orange-300" />登入／台北市</a>}
           <button aria-label="開啟選單" className="grid h-9 w-9 place-items-center rounded-full bg-white/10 backdrop-blur-md"><Menu className="h-4 w-4" /></button>
         </div>
         <div className="relative mt-7">
