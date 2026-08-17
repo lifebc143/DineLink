@@ -48,7 +48,12 @@ export async function beginOAuthLogin(origin: string) {
   url.searchParams.set("state", encodeState({ redirectUri, nonce }));
   url.searchParams.set("type", "signIn");
   const store = await cookies();
-  store.set(STATE_COOKIE, nonce, { ...cookieOptions(origin.startsWith("https://")), maxAge: 600 });
+  const useSecureCookie = origin.startsWith("https://");
+  // Apple Sign in returns from a third-party identity flow. On HTTPS, the nonce
+  // must therefore be eligible for a cross-site callback while remaining
+  // host-only, HttpOnly and Secure. Local HTTP development keeps Lax because
+  // browsers reject SameSite=None cookies without Secure.
+  store.set(STATE_COOKIE, nonce, { ...cookieOptions(useSecureCookie), sameSite: useSecureCookie ? "none" : "lax", maxAge: 600 });
   return url.toString();
 }
 

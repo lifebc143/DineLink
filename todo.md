@@ -298,3 +298,6 @@
 - [x] 盤點登入 Session、管理者角色與個人主頁驗證狀態的資料傳遞，定位管理者誤顯示未驗證原因。
 - [x] 將管理者個人主頁改為顯示「管理者已授權」，隱藏驗證申請操作並保留一般會員驗證流程。
 - [x] 補齊管理者個人主頁標示與一般會員驗證操作回歸測試，完成手機驗證後自動發布。
+- [x] 檢查 Apple OAuth 完成後的 callback URL、state Cookie、公開網域與 Session 建立流程，定位驗證成功卻無法登入的原因。
+- [x] 修正 Apple OAuth 回呼或 Session Cookie 設定，確保 iOS Safari／Chrome 可回到正式 DineLink 網域並維持登入。
+- [x] 補齊 OAuth 回呼、公開網域與 Session 狀態回歸測試，完成正式流程驗證後自動發布。
