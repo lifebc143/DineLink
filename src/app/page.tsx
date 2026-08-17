@@ -509,6 +509,11 @@ function ProfileV2({ onOpenPrd, onOpenMyEvents, userName, avatarUrl, onAvatarUpd
   const [verificationMessage, setVerificationMessage] = useState("");
   const displayName = userName || "訪客";
   const initial = displayName.slice(0, 1).toUpperCase() || "你";
+  const { insights, state: insightsState } = useProfileInsights();
+  const summaryReady = insightsState === "ready" && insights;
+  const summaryCredit = summaryReady ? `${insights.creditScore} 分` : insightsState === "loading" ? "整理中" : "待累積";
+  const summaryCompleted = summaryReady ? `${insights.completedEventCount} 場` : "0 場";
+  const summaryAttendance = summaryReady && insights.attendanceRate !== null ? `${insights.attendanceRate}%` : insightsState === "loading" ? "整理中" : "待累積";
   const requestVerification = async () => { const response = await fetch("/api/me/verification", { method: "POST" }).catch(() => null); if (!response?.ok) { setVerificationMessage("驗證申請未送出，請稍後再試。"); return; } setVerification("pending"); setVerificationMessage("申請已送出，管理員將進行簡易審核。"); };
   return (
     <section className="page-enter px-4 pb-28 pt-5">
@@ -518,17 +523,17 @@ function ProfileV2({ onOpenPrd, onOpenMyEvents, userName, avatarUrl, onAvatarUpd
           <div className="flex gap-3"><ProfileAvatarEditor user={{ displayName, avatarUrl }} onUpdated={onAvatarUpdated} /><div><p className="text-lg font-black">{displayName}</p><p className="mt-1 text-xs text-violet-200">建立你的第一筆飯局紀錄</p></div></div>
           <div className="relative"><button type="button" onClick={() => setAccountMenuOpen((open) => !open)} aria-label="更多帳號設定" aria-expanded={accountMenuOpen} className="pressable rounded-xl bg-white/10 p-2"><MoreHorizontal className="h-4 w-4" /></button>{accountMenuOpen && <div role="menu" aria-label="帳號選單" className="absolute right-0 top-11 z-30 w-52 rounded-2xl border border-white/15 bg-slate-900/95 p-1.5 text-left shadow-2xl backdrop-blur"><p className="px-3 py-2 text-xs font-semibold text-violet-200">目前登入：{displayName}</p>{isAdmin && <button role="menuitem" type="button" onClick={() => { setAccountMenuOpen(false); onOpenAdmin(); }} className="pressable mt-1 w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-violet-100 hover:bg-violet-400/15">開啟 Admin 後台</button>}<div className="my-1 h-px bg-white/10" /><button role="menuitem" type="button" onClick={() => void onLogout()} className="pressable w-full rounded-xl px-3 py-2.5 text-left text-sm font-bold text-rose-200 hover:bg-rose-400/15">登出此帳號</button></div>}</div>
         </div>
-        <div className="relative mt-5 grid grid-cols-3 divide-x divide-white/10 rounded-2xl bg-white/10 py-3 text-center backdrop-blur">
-          <div><p className="text-base font-black">待累積</p><p className="mt-1 text-[10px] font-bold text-violet-200">信用分數</p></div>
-          <div><p className="text-base font-black">0</p><p className="mt-1 text-[10px] font-bold text-violet-200">已完成飯局</p></div>
-          <div><p className="text-base font-black">待累積</p><p className="mt-1 text-[10px] font-bold text-violet-200">出席率</p></div>
+        <div aria-label={`個人摘要：信用分數 ${summaryCredit}，已完成飯局 ${summaryCompleted}，出席率 ${summaryAttendance}`} className="relative mt-5 grid grid-cols-3 divide-x divide-white/10 rounded-2xl bg-white/10 py-3 text-center backdrop-blur">
+          <div><p className="text-base font-black">{summaryCredit}</p><p className="mt-1 text-[10px] font-bold text-violet-200">信用分數</p></div>
+          <div><p className="text-base font-black">{summaryCompleted}</p><p className="mt-1 text-[10px] font-bold text-violet-200">已完成飯局</p></div>
+          <div><p className="text-base font-black">{summaryAttendance}</p><p className="mt-1 text-[10px] font-bold text-violet-200">出席率</p></div>
         </div>
       </div>
-      <ProfileInsights />
+      <ProfileInsights insights={insights} state={insightsState} />
       <div className="mt-3 rounded-[24px] border border-sky-100 bg-sky-50 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-sky-950">帳號驗證</p><p className="mt-1 text-xs leading-relaxed text-sky-800">{verification === "verified" ? "你的帳號已完成驗證。" : verification === "pending" ? "驗證申請已送出，等待管理員審核。" : verification === "rejected" ? "上次驗證未通過，你可以重新提出申請。" : "完成簡易驗證後，後台會標示為已驗證會員。"}</p>{verificationMessage && <p role="status" className="mt-2 text-xs font-semibold text-sky-700">{verificationMessage}</p>}</div>{verification !== "verified" && verification !== "pending" && <button type="button" onClick={() => void requestVerification()} className="pressable shrink-0 rounded-xl bg-sky-600 px-3 py-2 text-xs font-bold text-white">申請驗證</button>}<span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${verification === "verified" ? "bg-emerald-100 text-emerald-700" : verification === "pending" ? "bg-amber-100 text-amber-700" : "bg-white text-slate-500"}`}>{verification === "verified" ? "已驗證" : verification === "pending" ? "審核中" : "未驗證"}</span></div></div>
       <div className="mt-3 rounded-[24px] border border-violet-100 bg-violet-50 p-4"><p className="text-sm font-black text-violet-950">平台資格與安全規範</p><p className="mt-1 text-xs leading-relaxed text-violet-800">請尊重他人並遵守飯局約定。若涉及騷擾、詐騙、危害安全或其他違反規範情形，平台得限制帳號功能、停權或取消使用資格；請勿事先匯款，並保護個人隱私。</p></div>
       <div className="mt-3 rounded-[24px] border border-amber-100 bg-amber-50 p-4"><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-400 text-white"><Crown className="h-5 w-5" /></div><div className="flex-1"><p className="text-sm font-black text-amber-950">DineLink Plus</p><p className="mt-0.5 text-xs text-amber-800">優先曝光與更多精準篩選條件</p></div><ChevronRight className="h-4 w-4 text-amber-700" /></div></div>
-      <button onClick={onOpenMyEvents} className="pressable mt-3 flex w-full items-center justify-between rounded-[24px] border border-emerald-100 bg-emerald-50 p-4 text-left"><span className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-600 text-white"><CalendarDays className="h-5 w-5" /></span><span><span className="block text-sm font-black text-emerald-950">我的飯局</span><span className="mt-0.5 block text-xs text-emerald-700">管理我發起、我申請與待審核的飯局</span></span></span><ChevronRight className="h-4 w-4 text-emerald-600" /></button>
+      <button onClick={onOpenMyEvents} aria-label="前往我的飯局管理與完成飯局" className="pressable mt-3 flex w-full items-center justify-between rounded-[24px] border border-emerald-100 bg-emerald-50 p-4 text-left"><span className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-600 text-white"><CalendarDays className="h-5 w-5" /></span><span><span className="block text-sm font-black text-emerald-950">我的飯局</span><span className="mt-0.5 block text-xs leading-relaxed text-emerald-700">要完成飯局？先標記成員出席，再點「完成飯局並前往評價」</span></span></span><ChevronRight className="h-4 w-4 text-emerald-600" /></button>
       <button onClick={onOpenPrd} className="pressable mt-3 flex w-full items-center justify-between rounded-[24px] border border-violet-100 bg-violet-50 p-4 text-left"><span className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-violet-600 text-white"><Sparkles className="h-5 w-5" /></span><span><span className="block text-sm font-black text-violet-950">產品規格與開發藍圖</span><span className="mt-0.5 block text-xs text-violet-600">查看 MVP 模組、技術架構與 Roadmap</span></span></span><ChevronRight className="h-4 w-4 text-violet-500" /></button>
     </section>
   );
@@ -536,10 +541,16 @@ function ProfileV2({ onOpenPrd, onOpenMyEvents, userName, avatarUrl, onAvatarUpd
 
 type InsightPayload = { creditScore: number; completedEventCount: number; attendanceRate: number | null; attendanceTotal: number; trend: Array<{ label: string; score: number }>; dimensions: { punctuality: number | null; politeness: number | null; interaction: number | null } };
 
-function ProfileInsights() {
+type InsightState = "loading" | "ready" | "empty" | "error";
+
+function useProfileInsights() {
   const [insights, setInsights] = useState<InsightPayload | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "empty" | "error">("loading");
-  useEffect(() => { let active = true; void fetch("/api/me/insights", { cache: "no-store" }).then(async (response) => { if (!active) return; if (response.status === 401) { setState("empty"); return; } if (!response.ok) { setState("error"); return; } const result = await response.json() as InsightPayload; setInsights(result); setState(result.trend.length || result.attendanceTotal ? "ready" : "empty"); }).catch(() => { if (active) setState("error"); }); return () => { active = false; }; }, []);
+  const [state, setState] = useState<InsightState>("loading");
+  useEffect(() => { let active = true; void fetch("/api/me/insights", { cache: "no-store" }).then(async (response) => { if (!active) return; if (response.status === 401) { setState("empty"); return; } if (!response.ok) { setState("error"); return; } const result = await response.json() as InsightPayload; setInsights(result); setState(result.trend.length || result.attendanceTotal || result.completedEventCount ? "ready" : "empty"); }).catch(() => { if (active) setState("error"); }); return () => { active = false; }; }, []);
+  return { insights, state };
+}
+
+function ProfileInsights({ insights, state }: { insights: InsightPayload | null; state: InsightState }) {
   if (state === "loading") return <LoadingState className="mt-5" compact label="正在整理你的信用與出席紀錄…" />;
   if (state === "empty") return <div className="mt-5 rounded-[24px] border border-violet-100 bg-violet-50 p-4"><p className="text-sm font-black text-violet-950">信用檔案等待第一筆紀錄</p><p className="mt-1 text-xs leading-relaxed text-violet-700">完成飯局並收到互評後，這裡會顯示真實的信用 Rating 趨勢與歷史出席率。</p></div>;
   if (state === "error" || !insights) return <div className="mt-5 rounded-[24px] border border-amber-100 bg-amber-50 p-4 text-xs leading-relaxed text-amber-800">目前無法載入信用洞察，請稍後重新整理再試。</div>;

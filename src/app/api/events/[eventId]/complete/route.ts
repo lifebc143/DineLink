@@ -39,6 +39,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ eventId: 
       const completedAt = new Date();
       const reviewDueAt = new Date(completedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
       await tx.update(diningEvents).set({ status: "completed", completedAt, reviewDueAt, reviewReminderSentAt: null, updatedAt: completedAt }).where(eq(diningEvents.id, eventId));
+      await tx.update(users).set({ completedEventCount: sql`${users.completedEventCount} + 1`, updatedAt: completedAt }).where(eq(users.id, event.hostId));
       const attendees = attendances.filter((entry) => ["attended", "late"].includes(entry.status));
       if (attendees.length) {
         const reviewRecipientIds = [...new Set([...attendees.map((entry) => entry.userId), event.hostId])];

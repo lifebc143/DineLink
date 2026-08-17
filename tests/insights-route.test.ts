@@ -21,7 +21,8 @@ describe("GET /api/me/insights", () => {
     mocks.select
       .mockReturnValueOnce({ from: () => ({ where: () => ({ limit: async () => [{ creditScore: 84, completedEventCount: 3, noShowCount: 0 }] }) }) })
       .mockReturnValueOnce({ from: () => ({ where: async () => [{ status: "attended" }, { status: "late" }, { status: "no_show" }, { status: "confirmed" }] }) })
-      .mockReturnValueOnce({ from: () => ({ where: () => ({ orderBy: async () => [{ punctualityScore: 5, politenessScore: 4, funScore: 5, submittedAt: new Date("2026-08-01T00:00:00.000Z") }, { punctualityScore: 4, politenessScore: 5, funScore: 4, submittedAt: new Date("2026-08-02T00:00:00.000Z") }] }) }) });
+      .mockReturnValueOnce({ from: () => ({ where: () => ({ orderBy: async () => [{ eventId: "event-1", punctualityScore: 5, politenessScore: 4, funScore: 5, submittedAt: new Date("2026-08-01T00:00:00.000Z") }, { eventId: "event-2", punctualityScore: 4, politenessScore: 5, funScore: 4, submittedAt: new Date("2026-08-02T00:00:00.000Z") }] }) }) })
+      .mockReturnValueOnce({ from: () => ({ where: async () => [{ id: "event-3" }] }) });
     const response = await GET();
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ creditScore: 84, completedEventCount: 3, attendanceRate: 67, attendanceTotal: 3, dimensions: { punctuality: 4.5, politeness: 4.5, interaction: 4.5 }, trend: [{ score: 93 }, { score: 90 }] });

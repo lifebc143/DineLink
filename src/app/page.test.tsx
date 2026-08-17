@@ -269,10 +269,12 @@ describe("發起飯局表單", () => {
     vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/me/insights" ? { creditScore: 88, completedEventCount: 4, attendanceRate: 75, attendanceTotal: 4, trend: [{ label: "8/1", score: 86 }, { label: "8/8", score: 88 }], dimensions: { punctuality: 4.5, politeness: 4.8, interaction: 4.2 } } : {} })));
     render(<Home />);
     fireEvent.click(screen.getByText("個人主頁"));
-    expect(await screen.findByText("88 分")).not.toBeNull();
-    expect(screen.getByText("75%")).not.toBeNull();
+    expect((await screen.findAllByText("88 分")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("75%").length).toBeGreaterThan(0);
     expect(screen.getByText("信用 Rating 趨勢")).not.toBeNull();
     expect(screen.getByText("準時 · 4.5 / 5")).not.toBeNull();
+    expect(screen.getByLabelText("個人摘要：信用分數 88 分，已完成飯局 4 場，出席率 75%")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "前往我的飯局管理與完成飯局" }).textContent).toContain("完成飯局並前往評價");
   });
 
   it("公開 API 的已發布飯局會載入探索清單，並保留行動版確認按鈕", async () => {
