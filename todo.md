@@ -291,4 +291,4 @@
 - [x] 讀取 GitHub Actions 最近失敗執行紀錄與 `.github/workflows` 設定，定位 4 秒內失敗的根因。
 - [x] 修正 CI 的 Node／pnpm、依賴安裝、測試、PostgreSQL 測試環境或 production build 設定。
 - [x] 在本機執行與 CI 相同的驗證指令，提交並推送修正至 GitHub main。
-- [ ] 確認 GitHub Actions 新一輪 Verify Next.js MVP 工作流程通過。
+- [x] 確認 GitHub Actions 新一輪 Verify Next.js MVP 工作流程通過。
