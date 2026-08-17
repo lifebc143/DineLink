@@ -437,11 +437,12 @@ describe("發起飯局表單", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/admin/overview", { cache: "no-store" });
   });
 
-  it("未登入時首頁頂部保留 OAuth 登入入口", async () => {
+  it("未登入時首頁頂部可開啟 Email OTP 登入介面", async () => {
     vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve({ ok: true, status: 200, json: async () => url === "/api/auth/session" ? { user: null } : { events: [] } })));
     render(<Home />);
-    const loginLink = await screen.findByText("登入／台北市");
-    expect(loginLink.closest("a")?.getAttribute("href")).toBe("/api/auth/login");
+    const loginButton = await screen.findByRole("button", { name: "登入／台北市" });
+    fireEvent.click(loginButton);
+    expect(await screen.findByRole("dialog", { name: "使用 Email 登入" })).not.toBeNull();
   });
 
   it("未驗證會員可從個人主頁送出簡易驗證申請", async () => {

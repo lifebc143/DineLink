@@ -301,3 +301,15 @@
 - [x] 檢查 Apple OAuth 完成後的 callback URL、state Cookie、公開網域與 Session 建立流程，定位驗證成功卻無法登入的原因。
 - [x] 修正 Apple OAuth 回呼或 Session Cookie 設定，確保 iOS Safari／Chrome 可回到正式 DineLink 網域並維持登入。
 - [x] 補齊 OAuth 回呼、公開網域與 Session 狀態回歸測試，完成正式流程驗證後自動發布。
+- [x] 盤點 iOS Safari／Chrome、LINE／Facebook 內建瀏覽器與現有 Manus OAuth Redirect、Cookie、Session 相容性。
+- [x] 實作全頁 Redirect 登入、iOS Cookie 相容性與 LINE／Facebook 內建瀏覽器的 Safari 開啟引導。
+- [x] 盤點 LINE Login 與 Email OTP 所需的外部提供者、回呼網域與安全憑證，建立可實作的整合邊界。
+- [x] 補齊行動登入與內建瀏覽器提示回歸測試，完成發布與正式驗證。
+- [ ] 盤點 users 資料模型、既有登入流程與郵件服務設定，定義 Email OTP 的資料保存、效期、嘗試次數與速率限制。
+- [ ] 建立 Email OTP 請求／驗證 API，使用雜湊 OTP、短效期、單次使用與安全 Session Cookie 建立登入狀態。
+- [ ] 建立 iOS 友善 Email OTP 登入介面，支援 6 位數輸入、autocomplete="one-time-code"、全頁 Redirect 與 LINE 內建瀏覽器 Safari 引導。
+- [ ] 串接正式寄信服務並完成 Email OTP、iOS Cookie、內建瀏覽器與登入回歸測試後自動發布。
+- [x] 建立可直接於手機測試的 Email OTP 前端：Email 輸入、六位數驗證碼輸入、重送倒數與清楚的測試模式說明。
+- [x] 為驗證碼輸入加入 iPhone `autocomplete="one-time-code"`、數字鍵盤與單欄位貼上六位數字支援。
+- [x] 將 LINE 內建瀏覽器提示整合至登入畫面，提供複製連結與改用 Safari 開啟步驟。
+- [x] 補齊 Email OTP 前端、iOS 自動帶入與 LINE 引導元件測試，完成手機預覽驗證並自動發布。

@@ -5,9 +5,12 @@ import Image from "next/image";
 import { formatTaipeiTime, TAIPEI_TIME_ZONE } from "@/lib/time";
 import AdminDashboard from "@/components/AdminDashboard";
 import LoadingState from "@/components/LoadingState";
+import InAppBrowserLoginNotice from "@/components/InAppBrowserLoginNotice";
+import EmailOtpLoginSheet from "@/components/EmailOtpLoginSheet";
 import MyEventsManagement from "@/components/MyEventsManagement";
 import PreviewConfirmSheet from "@/components/PreviewConfirmSheet";
 import ProfileAvatarEditor, { AvatarUser } from "@/components/ProfileAvatarEditor";
+import { loginRedirectHref } from "@/lib/mobile-login";
 import {
   ArrowLeft,
   Bell,
@@ -212,6 +215,7 @@ function AccountAvatar({ avatarUrl, userName }: { avatarUrl?: string | null; use
 function ExplorePage({ events, notice, onOpen, userName, userAvatarUrl, onAccountClick, loading }: { events: DiningEvent[]; notice: string; onOpen: (event: DiningEvent) => void; userName?: string | null; userAvatarUrl?: string | null; onAccountClick: () => void; loading: boolean }) {
   const [view, setView] = useState<ViewMode>("list");
   const [filter, setFilter] = useState("全部");
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
   const filters = ["全部", "今晚", "週末", "近距離"];
 
   return (
@@ -220,7 +224,7 @@ function ExplorePage({ events, notice, onOpen, userName, userAvatarUrl, onAccoun
         <div className="mesh-orb mesh-orb-one" />
         <div className="mesh-orb mesh-orb-two" />
         <div className="relative flex items-center justify-between">
-          {userName ? <button type="button" onClick={onAccountClick} aria-label={`開啟 ${userName} 的個人主頁`} className="pressable flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md"><AccountAvatar avatarUrl={userAvatarUrl} userName={userName} />{userName}</button> : <a href="/api/auth/login" className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md"><MapPin className="h-3.5 w-3.5 text-orange-300" />登入／台北市</a>}
+          {userName ? <button type="button" onClick={onAccountClick} aria-label={`開啟 ${userName} 的個人主頁`} className="pressable flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md"><AccountAvatar avatarUrl={userAvatarUrl} userName={userName} />{userName}</button> : <button type="button" onClick={() => setShowEmailLogin(true)} className="pressable flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-bold backdrop-blur-md"><MapPin className="h-3.5 w-3.5 text-orange-300" />登入／台北市</button>}
           <button aria-label="開啟選單" className="grid h-9 w-9 place-items-center rounded-full bg-white/10 backdrop-blur-md"><Menu className="h-4 w-4" /></button>
         </div>
         <div className="relative mt-7">
@@ -233,6 +237,7 @@ function ExplorePage({ events, notice, onOpen, userName, userAvatarUrl, onAccoun
           <ChevronRight className="h-4 w-4 text-white/70" />
         </div>
       </header>
+      {!userName && <InAppBrowserLoginNotice />}
 
       <div className="mt-5 flex items-center gap-2">
         <div className="flex h-11 flex-1 items-center gap-2 rounded-2xl border border-white/70 bg-white/70 px-3 shadow-sm backdrop-blur-md">
@@ -260,6 +265,7 @@ function ExplorePage({ events, notice, onOpen, userName, userAvatarUrl, onAccoun
         ) : <ExploreMap events={events} onOpen={onOpen} />}
       </div>
       <footer className="mt-8 px-1 text-center text-[11px] leading-relaxed text-slate-500">DineLink 約飯｜公開飯局經主辦人審核後加入，請妥善保護個人資訊。</footer>
+      {showEmailLogin && <EmailOtpLoginSheet onClose={() => setShowEmailLogin(false)} />}
     </section>
   );
 }
