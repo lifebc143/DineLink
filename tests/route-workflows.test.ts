@@ -31,7 +31,7 @@ function transactionWith(selectResults: unknown[][]) {
 }
 
 const host = { id: "host-id", displayName: "Host", pointBalance: 500 };
-const applicant = { id: "11111111-1111-4111-8111-111111111111", displayName: "Member", pointBalance: 500 };
+const applicant = { id: "11111111-1111-4111-8111-111111111111", displayName: "Member", pointBalance: 500, avatarUrl: "/manus-storage/avatar.jpg", bio: "喜歡認識新朋友，也喜歡探索台北不同餐廳。", gender: "woman", ageRange: "25-34", interestTags: ["咖啡"], preferredArea: "台北信義", verificationStatus: "verified" };
 
 beforeEach(() => { state.user = host; state.transaction = null; });
 
@@ -66,6 +66,13 @@ describe("DineLink transaction Route Handlers", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ error: "DUPLICATE_APPLICATION" });
     expect(fixture.inserts).toHaveLength(0);
+  });
+
+  it("在申請前要求一般會員補齊必要信任資料", async () => {
+    state.user = { id: applicant.id, displayName: applicant.displayName, pointBalance: 500 };
+    const response = await createApplication(new Request("http://localhost/api/events/event-id/applications", { method: "POST", body: JSON.stringify({}) }) as never, { params: Promise.resolve({ eventId: "event-id" }) });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: "PROFILE_INCOMPLETE" });
   });
 
   it("releases held points and creates review notices when an attended member's event completes", async () => {

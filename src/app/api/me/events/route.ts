@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { calculateProfileTrust } from "@/lib/profile-trust";
 import { chatMessages, diningEvents, eventApplications, eventAttendances, users } from "../../../../../drizzle/schema";
 
 export const runtime = "nodejs";
@@ -16,7 +17,7 @@ export async function GET() {
   const [pendingRows, attendanceRows, messageRows] = hostedEventIds.length === 0
     ? [[], [], []]
     : await Promise.all([
-      db.select({ application: eventApplications, applicant: { id: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl } })
+      db.select({ application: eventApplications, applicant: { id: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl, bio: users.bio, ageRange: users.ageRange, interestTags: users.interestTags, preferredArea: users.preferredArea, gender: users.gender, verificationStatus: users.verificationStatus, authSubject: users.authSubject } })
         .from(eventApplications)
         .innerJoin(users, eq(eventApplications.applicantId, users.id))
         .where(and(inArray(eventApplications.eventId, hostedEventIds), eq(eventApplications.status, "pending"))),
@@ -46,7 +47,7 @@ export async function GET() {
   return NextResponse.json({
     hosted: hostedEvents.map((event) => ({
       event,
-      pendingApplications: pendingRows.filter((row) => row.application.eventId === event.id),
+      pendingApplications: pendingRows.filter((row) => row.application.eventId === event.id).map((row) => ({ ...row, trust: calculateProfileTrust(row.applicant) })),
       attendances: attendanceRows.filter((row) => row.attendance.eventId === event.id).map((row) => ({ ...row, lastContact: latestMemberContact.get(`${event.id}:${row.member.id}`) ?? null })),
     })),
     applied: appliedRows,

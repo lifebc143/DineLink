@@ -1,0 +1,1 @@
+ALTER TABLE "event_applications" ADD COLUMN "lifestyle_photo_url" text;
