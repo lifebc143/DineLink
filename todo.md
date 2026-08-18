@@ -326,6 +326,9 @@
 - [x] 建立申請生活照上傳 API，限制 JPG／PNG／WebP 與 5MB，使用受管理儲存且驗證申請者／飯局關係。
 - [x] 在申請飯局時提供生活照預覽與可跳過說明，並在主辦人的待審核申請卡呈現照片與信任摘要。
 - [x] 補齊生活照格式、大小、存取權限、申請流程與主辦審核卡的回歸測試，完成後自動發布。
+- [x] 盤點首頁現有 title、description 與 metadata 設定，逐項確認 SEO 稽核要求的字元與數量上限。
+- [x] 為首頁新增 3–8 個聚焦 meta keywords，並將 title 控制在 30–60 字元、description 控制在 50–160 字元。
+- [x] 補齊 metadata 限制回歸測試，執行 production build 與自動發布。
 - [x] 建立可直接於手機測試的 Email OTP 前端：Email 輸入、六位數驗證碼輸入、重送倒數與清楚的測試模式說明。
 - [x] 為驗證碼輸入加入 iPhone `autocomplete="one-time-code"`、數字鍵盤與單欄位貼上六位數字支援。
 - [x] 將 LINE 內建瀏覽器提示整合至登入畫面，提供複製連結與改用 Safari 開啟步驟。

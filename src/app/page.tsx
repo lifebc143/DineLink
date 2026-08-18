@@ -11,6 +11,7 @@ import MyEventsManagement from "@/components/MyEventsManagement";
 import PreviewConfirmSheet from "@/components/PreviewConfirmSheet";
 import ProfileAvatarEditor, { AvatarUser } from "@/components/ProfileAvatarEditor";
 import ProfileTrustEditor from "@/components/ProfileTrustEditor";
+import { HOME_SEO } from "@/lib/home-seo";
 import { loginRedirectHref } from "@/lib/mobile-login";
 import {
   ArrowLeft,
@@ -696,6 +697,8 @@ export default function Home() {
     return params.get("tab") === "messages" && params.get("eventId") ? { eventId: params.get("eventId")!, eventTitle: params.get("eventTitle") || "飯局聊天室", memberName: params.get("member") || "確認成員" } : null;
   });
   const [sessionUser, setSessionUser] = useState<{ id?: string; displayName?: string | null; name?: string | null; avatarUrl?: string | null; role?: "member" | "moderator" | "admin"; verificationStatus?: "unverified" | "pending" | "verified" | "rejected" } | null>(null);
+
+  useEffect(() => { document.title = HOME_SEO.title; }, []);
 
   useEffect(() => { let active = true; void fetch("/api/events", { cache: "no-store" }).then(async (response) => { if (!response.ok || !active) return; const payload = await response.json() as { events?: ApiEventRow[] }; if (active && payload.events?.length) setEvents(payload.events.map(eventFromApi)); }).catch(() => undefined).finally(() => { if (active) setEventsLoading(false); }); return () => { active = false; }; }, []);
 
