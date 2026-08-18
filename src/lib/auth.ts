@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
@@ -10,6 +11,10 @@ const SESSION_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 type SessionPayload = { subject: string; displayName: string };
 type OAuthUserInfo = { openId: string; name?: string; email?: string; platform?: string; loginMethod?: string };
+
+async function signSession(user: { id: string; displayName: string }) {
+  return new SignJWT({ subject: user.id, displayName: user.displayName }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(`${SESSION_AGE_SECONDS}s`).sign(secret());
+}
 
 function secret() {
   const value = process.env.JWT_SECRET;
@@ -77,8 +82,24 @@ export async function completeOAuthLogin(code: string, state: string, useSecureC
   const displayName = oauthUser.name?.trim() || "DineLink Member";
   const [user] = await db.insert(users).values({ authSubject: oauthUser.openId, displayName, email: oauthUser.email ?? null, lastActiveAt: new Date() }).onConflictDoUpdate({ target: users.authSubject, set: { displayName, email: oauthUser.email ?? null, lastActiveAt: new Date(), updatedAt: new Date() } }).returning();
   if (!user) throw new Error("User upsert failed");
-  const session = await new SignJWT({ subject: user.id, displayName: user.displayName }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime(`${SESSION_AGE_SECONDS}s`).sign(secret());
+  const session = await signSession(user);
   return { user, session };
+}
+
+export async function completeMockEmailOtpLogin(email: string) {
+  const fingerprint = createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 40);
+  const authSubject = `mock-email-otp:${fingerprint}`;
+  const [user] = await db.insert(users).values({
+    authSubject,
+    displayName: "DineLink 測試會員",
+    bio: "此帳號僅供 Email OTP 測試模式使用。",
+    lastActiveAt: new Date(),
+  }).onConflictDoUpdate({
+    target: users.authSubject,
+    set: { lastActiveAt: new Date(), updatedAt: new Date() },
+  }).returning();
+  if (!user) throw new Error("Mock user upsert failed");
+  return { user, session: await signSession(user) };
 }
 
 export async function getCurrentUser() {

@@ -1,13 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import EmailOtpLoginSheet from "./EmailOtpLoginSheet";
 
 describe("Email OTP 行動登入介面", () => {
   afterEach(() => window.localStorage.clear());
 
-  it("明確說明不寄信測試模式，並提供 iPhone 六位數示範驗證碼流程", () => {
-    render(<EmailOtpLoginSheet onClose={() => undefined} />);
+  it("明確說明不寄信測試模式，並提供 iPhone 六位數示範驗證碼流程", async () => {
+    const onLoginSuccess = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<EmailOtpLoginSheet onClose={() => undefined} onLoginSuccess={onLoginSuccess} />);
     expect(screen.getByText("測試模式不會寄送真實郵件。", { exact: false })).not.toBeNull();
     const email = screen.getByRole("textbox", { name: "Email 地址" });
     fireEvent.change(email, { target: { value: "dine@example.com" } });
@@ -19,8 +22,9 @@ describe("Email OTP 行動登入介面", () => {
     fireEvent.change(code, { target: { value: "12abc34567" } });
     expect((code as HTMLInputElement).value).toBe("123456");
     expect(screen.getByRole("status").textContent).toContain("示範碼正確");
-    fireEvent.click(screen.getByRole("button", { name: "完成示範驗證" }));
-    const statuses = screen.getAllByRole("status");
-    expect(statuses[statuses.length - 1].textContent).toContain("示範驗證成功");
+    fireEvent.click(screen.getByRole("button", { name: "登入測試帳號" }));
+    await waitFor(() => expect(onLoginSuccess).toHaveBeenCalledOnce());
+    expect(screen.getByText("測試登入成功，正在前往 DineLink。", { exact: false })).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/mock-email-otp", expect.objectContaining({ method: "POST" }));
   });
 });

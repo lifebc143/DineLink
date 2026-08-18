@@ -265,7 +265,7 @@ function ExplorePage({ events, notice, onOpen, userName, userAvatarUrl, onAccoun
         ) : <ExploreMap events={events} onOpen={onOpen} />}
       </div>
       <footer className="mt-8 px-1 text-center text-[11px] leading-relaxed text-slate-500">DineLink 約飯｜公開飯局經主辦人審核後加入，請妥善保護個人資訊。</footer>
-      {showEmailLogin && <EmailOtpLoginSheet onClose={() => setShowEmailLogin(false)} />}
+      {showEmailLogin && <EmailOtpLoginSheet onClose={() => setShowEmailLogin(false)} onLoginSuccess={() => window.location.assign("/")} />}
     </section>
   );
 }
