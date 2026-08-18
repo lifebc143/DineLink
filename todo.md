@@ -309,6 +309,10 @@
 - [ ] 建立 Email OTP 請求／驗證 API，使用雜湊 OTP、短效期、單次使用與安全 Session Cookie 建立登入狀態。
 - [ ] 建立 iOS 友善 Email OTP 登入介面，支援 6 位數輸入、autocomplete="one-time-code"、全頁 Redirect 與 LINE 內建瀏覽器 Safari 引導。
 - [ ] 串接正式寄信服務並完成 Email OTP、iOS Cookie、內建瀏覽器與登入回歸測試後自動發布。
+- [ ] 使用者完成 iPhone 實機測試並提供已驗證寄件網域的 Resend 憑證後，啟用真實 Email OTP 寄送與驗證 API。
+- [x] 將 Email OTP 測試模式改為明確說明「不寄送真實郵件」，避免「驗證碼將寄至」文案造成誤解。
+- [x] 提供安全且明確標示的示範驗證碼登入流程，讓 iPhone 使用者可在測試模式完成輸入與驗證操作。
+- [x] 補齊測試模式文案、示範驗證碼與 iPhone 驗證按鈕狀態的回歸測試，完成後自動發布。
 - [x] 建立可直接於手機測試的 Email OTP 前端：Email 輸入、六位數驗證碼輸入、重送倒數與清楚的測試模式說明。
 - [x] 為驗證碼輸入加入 iPhone `autocomplete="one-time-code"`、數字鍵盤與單欄位貼上六位數字支援。
 - [x] 將 LINE 內建瀏覽器提示整合至登入畫面，提供複製連結與改用 Safari 開啟步驟。
